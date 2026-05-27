@@ -1,7 +1,7 @@
 /**
  * Port (interface) for fetching tournament data from an external football data source.
  *
- * Implementations live in infra/ (e.g. ApiFootballProvider).
+ * Implementations live in infra/ (e.g. StaticFixtureProvider).
  * Use-cases and domain logic depend ONLY on this interface — never on the concrete adapter.
  */
 

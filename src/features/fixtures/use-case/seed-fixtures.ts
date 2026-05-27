@@ -2,7 +2,7 @@
  * seedFixtures — use-case that populates the database with tournament fixtures.
  *
  * Algorithm:
- * 1. Fetch all fixtures from the MatchDataProvider (e.g. ApiFootballProvider).
+ * 1. Fetch all fixtures from the MatchDataProvider (e.g. StaticFixtureProvider).
  * 2. Extract unique teams (deduplicated by externalRef). Null teams (placeholder
  *    knockout slots) are skipped — no team row to create yet.
  * 3. Upsert teams FIRST — matches have FK references to teams.
