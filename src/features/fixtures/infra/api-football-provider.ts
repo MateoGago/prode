@@ -297,40 +297,44 @@ export class ApiFootballProvider implements MatchDataProvider {
   async getResults(): Promise<MatchResult[]> {
     const raw = await this.fetchFixtures({ status: "FT-AET-PEN" });
 
-    return raw
-      .filter((f) => f.goals.home !== null && f.goals.away !== null)
-      .map((f) => {
-        const round = mapRoundLabel(f.league.round);
-        const isPenalty = f.fixture.status.short === "PEN";
+    return raw.flatMap((f) => {
+      const { home: homeScore, away: awayScore } = f.goals;
+      // Skip matches without a final score; this also narrows both to `number`.
+      if (homeScore === null || awayScore === null) return [];
 
-        let penaltyWinnerId: string | null = null;
-        let advancerId: string | null = null;
+      const round = mapRoundLabel(f.league.round);
+      const isPenalty = f.fixture.status.short === "PEN";
 
-        if (isPenalty) {
-          if (f.teams.home.winner && f.teams.home.id !== null) {
-            penaltyWinnerId = String(f.teams.home.id);
-            advancerId = penaltyWinnerId;
-          } else if (f.teams.away.winner && f.teams.away.id !== null) {
-            penaltyWinnerId = String(f.teams.away.id);
-            advancerId = penaltyWinnerId;
-          }
-        } else if (round !== "group") {
-          if (f.teams.home.winner && f.teams.home.id !== null) {
-            advancerId = String(f.teams.home.id);
-          } else if (f.teams.away.winner && f.teams.away.id !== null) {
-            advancerId = String(f.teams.away.id);
-          }
+      let penaltyWinnerId: string | null = null;
+      let advancerId: string | null = null;
+
+      if (isPenalty) {
+        if (f.teams.home.winner && f.teams.home.id !== null) {
+          penaltyWinnerId = String(f.teams.home.id);
+          advancerId = penaltyWinnerId;
+        } else if (f.teams.away.winner && f.teams.away.id !== null) {
+          penaltyWinnerId = String(f.teams.away.id);
+          advancerId = penaltyWinnerId;
         }
+      } else if (round !== "group") {
+        if (f.teams.home.winner && f.teams.home.id !== null) {
+          advancerId = String(f.teams.home.id);
+        } else if (f.teams.away.winner && f.teams.away.id !== null) {
+          advancerId = String(f.teams.away.id);
+        }
+      }
 
-        return {
+      return [
+        {
           matchId: String(f.fixture.id),
           round,
           multiplier: ROUND_MULTIPLIERS[round],
-          homeScore: f.goals.home!,
-          awayScore: f.goals.away!,
+          homeScore,
+          awayScore,
           penaltyWinnerId,
           advancerId,
-        } satisfies MatchResult;
-      });
+        } satisfies MatchResult,
+      ];
+    });
   }
 }
