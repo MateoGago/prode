@@ -6,7 +6,7 @@ Juego de predicciones del Mundial 2026 para un grupo de amigos. Cada uno predice
 
 - **[Next.js 16](https://nextjs.org)** (App Router) · **React 19** · **TypeScript**
 - **Tailwind CSS 4**
-- **Supabase** (Postgres + Auth + RLS) — _en construcción_
+- **Supabase** (Postgres + Auth + RLS)
 - **[Bun](https://bun.sh)** como package manager y runtime de scripts
 - **[Biome](https://biomejs.dev)** para lint + format
 - **Vitest** + React Testing Library para tests
@@ -62,6 +62,8 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 | `bun run test:watch` | Tests en modo watch |
 | `bun run lint` | Chequea el código con Biome |
 | `bun run format` | Formatea el código con Biome |
+| `bun run seed` | Siembra equipos y fixtures desde el snapshot de openfootball |
+| `bun run sync` | Refresca resultados + bracket desde openfootball en vivo (idempotente) |
 
 ## Convención de commits
 
@@ -110,7 +112,21 @@ Dentro de cada feature se separa la **lógica pura** de la **infra/UI**. El cód
 
 ## Variables de entorno
 
-_Próximamente (Slice 2 en adelante):_ vas a necesitar un archivo `.env.local` con las claves de Supabase y de API-Football. Se documenta acá cuando se implemente.
+Copiá el ejemplo y completá con tus claves:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Ámbito | Requerida | Qué es |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | público | ✅ | URL del proyecto Supabase |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | público | ✅ | Clave `sb_publishable_...` (sistema nuevo de keys; la `anon` JWT está deprecada) |
+| `NEXT_PUBLIC_SITE_URL` | público | — | Origin para el redirect de Google OAuth. En local cae al origin del request; en prod ponela |
+| `SUPABASE_SERVICE_ROLE` | servidor | ✅ | Clave service-role (saltea RLS). **Solo server**, sin prefijo `NEXT_PUBLIC_`. La usan las server actions de admin y los scripts `seed`/`sync` |
+| `SUPABASE_URL` | servidor | — | Fallback de la URL para los scripts cuando no está `NEXT_PUBLIC_SUPABASE_URL` (ej: CI) |
+
+Las claves están en el dashboard de Supabase → **Settings → API**.
 
 ## Testing
 
