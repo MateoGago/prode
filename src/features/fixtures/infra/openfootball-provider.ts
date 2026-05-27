@@ -16,6 +16,7 @@
 import type { Match, MatchResult, Round, Team } from "../model";
 import { ROUND_MULTIPLIERS } from "../model";
 import type { MatchDataProvider } from "../ports/match-data-provider";
+import { localizeTeam } from "./data/team-locale";
 import worldcup2026 from "./data/worldcup-2026.json";
 
 // ---------------------------------------------------------------------------
@@ -187,12 +188,16 @@ function toMatches(data: OpenFootballData): Match[] {
     if (!raw.group) continue;
     for (const name of [raw.team1, raw.team2]) {
       if (teamByName.has(name)) continue;
+      // Map key stays the raw English name (knockout slots resolve by it);
+      // only the stored display name + flag are localized.
+      const externalRef = slugifyTeamName(name);
+      const { name: localName, flagUrl } = localizeTeam(externalRef, name);
       teamByName.set(name, {
         id: "", // assigned by the repo on upsert
-        externalRef: slugifyTeamName(name),
-        name,
+        externalRef,
+        name: localName,
         groupLabel: parseGroupLabel(raw.group),
-        flagUrl: null, // openfootball does not carry crests
+        flagUrl,
       });
     }
   }
