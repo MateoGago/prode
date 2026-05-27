@@ -10,9 +10,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { StaticFixtureProvider } from "../src/features/fixtures/infra/openfootball-provider";
-import { SupabaseMatchesRepo } from "../src/features/fixtures/infra/supabase-matches-repo";
-import { seedFixtures } from "../src/features/fixtures/use-case/seed-fixtures";
+import { seedFixtures } from "../src/features/fixtures/actions/seed-fixtures";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const serviceRole = process.env.SUPABASE_SERVICE_ROLE;
@@ -28,11 +26,8 @@ const client = createClient(url, serviceRole, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const provider = new StaticFixtureProvider();
-const repo = new SupabaseMatchesRepo(client);
-
 console.log("Seeding Mundial 2026 fixtures from openfootball dataset…");
-await seedFixtures({ provider, repo });
+await seedFixtures(client);
 
 const [{ count: teamsCount }, { count: matchesCount }] = await Promise.all([
   client.from("teams").select("*", { count: "exact", head: true }),

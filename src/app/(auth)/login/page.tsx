@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { AuthForm } from "@/features/auth/ui/auth-form";
+import { AuthForm } from "@/features/auth/components/auth-form";
 import { createClient } from "@/shared/supabase/server";
 
 export const metadata: Metadata = {

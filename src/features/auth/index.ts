@@ -10,8 +10,8 @@ export {
   signInWithPassword,
   signOut,
   signUpWithPassword,
-} from "./actions";
-export type { LoginInput, SignupInput } from "./schema";
-export { loginSchema, signupSchema } from "./schema";
-export { AuthForm } from "./ui/auth-form";
-export { SignOutButton } from "./ui/sign-out-button";
+} from "./actions/auth-actions";
+export { AuthForm } from "./components/auth-form";
+export { SignOutButton } from "./components/sign-out-button";
+export type { LoginInput, SignupInput } from "./entities/credentials";
+export { loginSchema, signupSchema } from "./entities/credentials";

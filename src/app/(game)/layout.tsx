@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { SignOutButton } from "@/features/auth/ui/sign-out-button";
+import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { createClient } from "@/shared/supabase/server";
 
 /**
