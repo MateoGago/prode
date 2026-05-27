@@ -109,9 +109,12 @@ describe("StaticFixtureProvider.getFixtures (against vendored 2026 data)", () =>
     const matches = await provider.getFixtures();
     const opener = matches.find(
       (m) =>
-        m.homeTeam?.name === "Mexico" && m.awayTeam?.name === "South Africa",
+        m.homeTeam?.externalRef === "mexico" &&
+        m.awayTeam?.externalRef === "south-africa",
     );
     expect(opener).toBeDefined();
+    expect(opener?.homeTeam?.name).toBe("México");
+    expect(opener?.awayTeam?.name).toBe("Sudáfrica");
     expect(opener?.round).toBe("group");
     expect(opener?.matchday).toBe(1);
     expect(opener?.homeTeam?.groupLabel).toBe("A");
@@ -159,6 +162,31 @@ describe("StaticFixtureProvider.getFixtures (against vendored 2026 data)", () =>
     const matches = await provider.getFixtures();
     const refs = new Set(matches.map((m) => m.externalRef));
     expect(refs.size).toBe(104);
+  });
+
+  it("localizes team names to Spanish and attaches a flag url", async () => {
+    const matches = await provider.getFixtures();
+    const opener = matches.find(
+      (m) => m.homeTeam?.externalRef === "mexico",
+    )?.homeTeam;
+    expect(opener?.name).toBe("México");
+    expect(opener?.flagUrl).toBe("https://flagcdn.com/w320/mx.png");
+  });
+
+  it("gives every one of the 48 teams a Spanish name and a flagcdn flag", async () => {
+    const matches = await provider.getFixtures();
+    const teams = new Map<string, { name: string; flagUrl: string | null }>();
+    for (const m of matches) {
+      for (const t of [m.homeTeam, m.awayTeam]) {
+        if (t) teams.set(t.externalRef, { name: t.name, flagUrl: t.flagUrl });
+      }
+    }
+    expect(teams.size).toBe(48);
+    for (const [ref, { flagUrl }] of teams) {
+      expect(flagUrl, `team "${ref}" has no flag`).toMatch(
+        /^https:\/\/flagcdn\.com\//,
+      );
+    }
   });
 });
 
@@ -221,8 +249,8 @@ describe("StaticFixtureProvider results mapping (synthetic live data)", () => {
   it("resolves a knockout's real teams and the penalty advancer", async () => {
     const matches = await provider.getFixtures();
     const ko = matches.find((x) => x.externalRef === "wc2026-ko-90");
-    // Teams resolved from real names, no placeholders.
-    expect(ko?.homeTeam?.name).toBe("Mexico");
+    // Teams resolved from real names (localized to Spanish), no placeholders.
+    expect(ko?.homeTeam?.name).toBe("México");
     expect(ko?.awayTeam?.name).toBe("Argentina");
     expect(ko?.homePlaceholder).toBeNull();
     // Score is the 120' result, excluding penalties.
