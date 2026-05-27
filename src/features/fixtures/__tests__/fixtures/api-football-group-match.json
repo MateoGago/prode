@@ -1,0 +1,42 @@
+{
+  "fixture": {
+    "id": 1035739,
+    "referee": null,
+    "timezone": "UTC",
+    "date": "2026-06-11T18:00:00+00:00",
+    "timestamp": 1749650400,
+    "periods": { "first": null, "second": null },
+    "venue": { "id": 264, "name": "Levi's Stadium", "city": "Santa Clara" },
+    "status": { "long": "Not Started", "short": "NS", "elapsed": null }
+  },
+  "league": {
+    "id": 1,
+    "name": "World Cup",
+    "country": "World",
+    "logo": "https://media.api-sports.io/football/leagues/1.png",
+    "flag": null,
+    "season": 2026,
+    "round": "Group Stage - 1"
+  },
+  "teams": {
+    "home": {
+      "id": 1570,
+      "name": "Mexico",
+      "logo": "https://media.api-sports.io/football/teams/1570.png",
+      "winner": null
+    },
+    "away": {
+      "id": 6,
+      "name": "Germany",
+      "logo": "https://media.api-sports.io/football/teams/6.png",
+      "winner": null
+    }
+  },
+  "goals": { "home": null, "away": null },
+  "score": {
+    "halftime": { "home": null, "away": null },
+    "fulltime": { "home": null, "away": null },
+    "extratime": { "home": null, "away": null },
+    "penalty": { "home": null, "away": null }
+  }
+}
