@@ -1,6 +1,7 @@
 // results: confirm-result use-case, cron ingest, admin override
 // Responsible for ingesting match results and triggering idempotent score recomputation.
 
+export { autoConfirmFinished } from "./actions/auto-confirm";
 export {
   type ConfirmResultOutcome,
   confirmResult,
@@ -9,6 +10,10 @@ export {
   type ConfirmActionResult,
   confirmResultAction,
 } from "./actions/confirm-result-action";
+export {
+  type ConfirmableMatchRow,
+  selectConfirmable,
+} from "./entities/auto-confirm";
 export {
   type ConfirmedResult,
   type ResultError,
