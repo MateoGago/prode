@@ -28,6 +28,12 @@ export interface MatchRow {
   away_placeholder: string | null;
   kickoff_at: string;
   status: string;
+  home_score: number | null;
+  away_score: number | null;
+  penalty_winner_team_id: string | null;
+  advancer_team_id: string | null;
+  // result_confirmed_at is owned by the scoring engine, never written here:
+  // omitting it from upserts preserves any existing value on conflict.
 }
 
 /** Maps a domain Team to its `teams` table row. */
@@ -63,6 +69,10 @@ export function matchToRow(
     away_placeholder: match.awayPlaceholder,
     kickoff_at: match.kickoffAt.toISOString(),
     status: match.status,
+    home_score: match.homeScore,
+    away_score: match.awayScore,
+    penalty_winner_team_id: resolve(match.penaltyWinnerTeam),
+    advancer_team_id: resolve(match.advancerTeam),
   };
 }
 

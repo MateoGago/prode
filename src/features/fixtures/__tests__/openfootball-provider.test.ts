@@ -161,3 +161,93 @@ describe("StaticFixtureProvider.getFixtures (against vendored 2026 data)", () =>
     expect(refs.size).toBe(104);
   });
 });
+
+describe("StaticFixtureProvider results mapping (synthetic live data)", () => {
+  // Mirrors what openfootball publishes once matches are played and the bracket
+  // resolves: scores appear, and knockout team1/team2 become real names.
+  const liveData = {
+    name: "test",
+    matches: [
+      {
+        round: "Matchday 1",
+        date: "2026-06-11",
+        time: "13:00 UTC-6",
+        team1: "Mexico",
+        team2: "Argentina",
+        group: "Group A",
+        ground: "x",
+        score: {
+          ht: [1, 0] as [number, number],
+          ft: [2, 1] as [number, number],
+        },
+      },
+      {
+        round: "Round of 16",
+        num: 90,
+        date: "2026-07-01",
+        time: "15:00 UTC-4",
+        team1: "Mexico",
+        team2: "Argentina",
+        ground: "y",
+        score: {
+          ht: [0, 1] as [number, number],
+          ft: [1, 1] as [number, number],
+          et: [1, 1] as [number, number],
+          p: [2, 4] as [number, number],
+        },
+      },
+      {
+        round: "Round of 16",
+        num: 91,
+        date: "2026-07-01",
+        time: "19:00 UTC-4",
+        team1: "3A",
+        team2: "3B",
+        ground: "z",
+      },
+    ],
+  };
+  const provider = new StaticFixtureProvider(liveData);
+
+  it("populates score and finished status for a played group match", async () => {
+    const matches = await provider.getFixtures();
+    const m = matches.find((x) => x.round === "group");
+    expect(m?.homeScore).toBe(2);
+    expect(m?.awayScore).toBe(1);
+    expect(m?.status).toBe("finished");
+    expect(m?.advancerTeam).toBeNull(); // group stage has no advancer
+  });
+
+  it("resolves a knockout's real teams and the penalty advancer", async () => {
+    const matches = await provider.getFixtures();
+    const ko = matches.find((x) => x.externalRef === "wc2026-ko-90");
+    // Teams resolved from real names, no placeholders.
+    expect(ko?.homeTeam?.name).toBe("Mexico");
+    expect(ko?.awayTeam?.name).toBe("Argentina");
+    expect(ko?.homePlaceholder).toBeNull();
+    // Score is the 120' result, excluding penalties.
+    expect(ko?.homeScore).toBe(1);
+    expect(ko?.awayScore).toBe(1);
+    // Argentina won the shootout 4-2, so it is both penalty winner and advancer.
+    expect(ko?.penaltyWinnerTeam?.name).toBe("Argentina");
+    expect(ko?.advancerTeam?.name).toBe("Argentina");
+  });
+
+  it("leaves an unplayed, unresolved knockout as scheduled placeholders", async () => {
+    const matches = await provider.getFixtures();
+    const ko = matches.find((x) => x.externalRef === "wc2026-ko-91");
+    expect(ko?.status).toBe("scheduled");
+    expect(ko?.homeScore).toBeNull();
+    expect(ko?.homeTeam).toBeNull();
+    expect(ko?.homePlaceholder).toBe("3A");
+  });
+
+  it("getResults returns only finished matches with resolved advancer refs", async () => {
+    const results = await provider.getResults();
+    expect(results).toHaveLength(2); // the two played matches
+    const ko = results.find((r) => r.matchId === "wc2026-ko-90");
+    expect(ko?.homeScore).toBe(1);
+    expect(ko?.advancerId).toBe("argentina");
+    expect(ko?.penaltyWinnerId).toBe("argentina");
+  });
+});

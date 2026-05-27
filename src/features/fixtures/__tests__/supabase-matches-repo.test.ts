@@ -87,4 +87,45 @@ describe("matchToRow", () => {
     expect(row.home_team_id).toBeNull();
     expect(row.away_team_id).toBeNull();
   });
+
+  it("maps score, finished status and resolved advancer/penalty winner", () => {
+    const argentina: Team = {
+      id: "",
+      externalRef: "argentina",
+      name: "Argentina",
+      groupLabel: "A",
+      flagUrl: null,
+    };
+    const finishedKo: Match = {
+      ...knockoutMatch(),
+      homeTeam: mexico,
+      awayTeam: argentina,
+      homePlaceholder: null,
+      awayPlaceholder: null,
+      status: "finished",
+      homeScore: 1,
+      awayScore: 1,
+      penaltyWinnerTeam: argentina,
+      advancerTeam: argentina,
+    };
+    const map = new Map<string, string>([
+      ["mexico", "uuid-mexico"],
+      ["argentina", "uuid-arg"],
+    ]);
+    const row = matchToRow(finishedKo, map);
+    expect(row.home_score).toBe(1);
+    expect(row.away_score).toBe(1);
+    expect(row.status).toBe("finished");
+    expect(row.penalty_winner_team_id).toBe("uuid-arg");
+    expect(row.advancer_team_id).toBe("uuid-arg");
+  });
+
+  it("leaves score and result columns null for an unplayed match", () => {
+    const row = matchToRow(groupMatch(), ids);
+    expect(row.home_score).toBeNull();
+    expect(row.away_score).toBeNull();
+    expect(row.penalty_winner_team_id).toBeNull();
+    expect(row.advancer_team_id).toBeNull();
+    expect(row.status).toBe("scheduled");
+  });
 });
