@@ -12,9 +12,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { StaticFixtureProvider } from "../src/features/fixtures/infra/openfootball-provider";
-import { SupabaseMatchesRepo } from "../src/features/fixtures/infra/supabase-matches-repo";
-import { syncFixtures } from "../src/features/fixtures/use-case/sync-fixtures";
+import { fetchRemoteDataset } from "../src/features/fixtures/actions/dataset";
+import { syncFixtures } from "../src/features/fixtures/actions/sync-fixtures";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const serviceRole = process.env.SUPABASE_SERVICE_ROLE;
@@ -31,11 +30,10 @@ const client = createClient(url, serviceRole, {
 });
 
 console.log("Syncing results + bracket from live openfootball dataset…");
-const provider = await StaticFixtureProvider.fromRemote();
-const repo = new SupabaseMatchesRepo(client);
+const data = await fetchRemoteDataset();
 // Matches only — teams are seeded once (with localized names + flags) and never
 // re-touched here, so a scheduled sync can never clobber that display data.
-await syncFixtures({ provider, repo });
+await syncFixtures(client, data);
 
 const { count } = await client
   .from("matches")
