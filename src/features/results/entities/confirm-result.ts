@@ -16,14 +16,75 @@ export interface ConfirmedResult {
   advancerTeamId: string | null;
 }
 
-/** A prediction to (re)score: its id plus the user's predicted scoreline. */
 export interface ScorablePrediction {
   id: string;
   homeScore: number;
   awayScore: number;
 }
 
-/** The points to persist for one prediction after recomputation. */
+export interface ResultInput {
+  matchId: string;
+  homeScore: number;
+  awayScore: number;
+  advancerTeamId: string | null;
+}
+
+export interface ResultMatchContext {
+  round: Round;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+}
+
+export type ResultError =
+  | "negative_score"
+  | "non_integer_score"
+  | "advancer_required"
+  | "advancer_not_competing"
+  | "advancer_not_allowed";
+
+export type ResultValidation =
+  | { ok: true }
+  | { ok: false; reason: ResultError };
+
+/**
+ * Server-side validation of an admin-entered final score — the form is cosmetic
+ * (REQ-XCUT-5). Unlike predictions, a knockout draw MUST record the ET/penalty
+ * winner (REQ-RES-3), a knockout non-draw may omit it, and a group match has none.
+ */
+export function validateResultInput(
+  input: ResultInput,
+  match: ResultMatchContext,
+): ResultValidation {
+  const { homeScore, awayScore, advancerTeamId } = input;
+
+  if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore)) {
+    return { ok: false, reason: "non_integer_score" };
+  }
+  if (homeScore < 0 || awayScore < 0) {
+    return { ok: false, reason: "negative_score" };
+  }
+
+  if (match.round === "group") {
+    if (advancerTeamId !== null) {
+      return { ok: false, reason: "advancer_not_allowed" };
+    }
+    return { ok: true };
+  }
+
+  const isDraw = homeScore === awayScore;
+  if (isDraw && advancerTeamId === null) {
+    return { ok: false, reason: "advancer_required" };
+  }
+  if (
+    advancerTeamId !== null &&
+    advancerTeamId !== match.homeTeamId &&
+    advancerTeamId !== match.awayTeamId
+  ) {
+    return { ok: false, reason: "advancer_not_competing" };
+  }
+  return { ok: true };
+}
+
 export interface ScoredPrediction {
   id: string;
   pointsAwarded: number;
