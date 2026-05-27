@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Prode Mundial 2026
 
-## Getting Started
+Juego de predicciones del Mundial 2026 para un grupo de amigos. Cada uno predice los resultados de los partidos; el que más puntos acumula gana el premio. Webapp + PWA instalable en el celular.
 
-First, run the development server:
+## Stack
+
+- **[Next.js 16](https://nextjs.org)** (App Router) · **React 19** · **TypeScript**
+- **Tailwind CSS 4**
+- **Supabase** (Postgres + Auth + RLS) — _en construcción_
+- **[Bun](https://bun.sh)** como package manager y runtime de scripts
+- **[Biome](https://biomejs.dev)** para lint + format
+- **Vitest** + React Testing Library para tests
+- **Husky** + **commitlint** para conventional commits
+
+## Requisitos previos
+
+Usamos **Bun** (no npm/yarn/pnpm). Instalalo:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# macOS / Linux
+curl -fsSL https://bun.sh/install | bash
+
+# o con Homebrew
+brew install oven-sh/bun/bun
+
+# Windows (PowerShell)
+powershell -c "irm bun.sh/install.ps1 | iex"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Verificá que quedó instalado:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+bun --version
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Instalación
 
-## Learn More
+```bash
+git clone git@github.com:Santipac/prode.git
+cd prode
+bun install
+```
 
-To learn more about Next.js, take a look at the following resources:
+> `bun install` corre el script `prepare`, que activa los hooks de Husky automáticamente. No tenés que hacer nada extra.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Levantar el proyecto
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+bun run dev
+```
 
-## Deploy on Vercel
+Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Comando | Qué hace |
+|---|---|
+| `bun run dev` | Servidor de desarrollo |
+| `bun run build` | Build de producción |
+| `bun run start` | Sirve el build de producción |
+| `bun run test` | Corre los tests una vez (Vitest) |
+| `bun run test:watch` | Tests en modo watch |
+| `bun run lint` | Chequea el código con Biome |
+| `bun run format` | Formatea el código con Biome |
+
+## Convención de commits
+
+Usamos **[Conventional Commits](https://www.conventionalcommits.org)**, validados por commitlint en cada commit (hook `commit-msg`). Además, antes de cada commit corre Biome (hook `pre-commit`).
+
+Formato: `tipo: descripción`. Ejemplos:
+
+```
+feat: agregar pantalla de predicciones
+fix: corregir el cálculo de puntos en empates
+docs: actualizar instrucciones de instalación
+```
+
+Tipos válidos: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `build`, `ci`, `style`, `perf`.
+
+Un commit que no cumple el formato (ej: `arreglos varios`) **se rechaza** automáticamente.
+
+## Estructura del proyecto (Screaming Architecture)
+
+El árbol de `src/` grita el dominio (un prode), no el framework:
+
+```
+src/
+  app/                 # Routing de Next (fino, delega a las features)
+  features/            # Una carpeta por capacidad de negocio
+    fixtures/          # Equipos, partidos y datos de la API
+    predictions/       # Predicciones + regla de bloqueo (lógica pura)
+    scoring/           # Motor de puntos (lógica pura)
+    results/           # Confirmación de resultados e ingesta
+    leaderboard/       # Tabla de posiciones
+    auth/              # Login, sesión y perfiles
+  shared/              # Utilidades compartidas (fechas, cliente Supabase, tipos)
+```
+
+Dentro de cada feature se separa la **lógica pura** de la **infra/UI**. El código va en **inglés**; el castellano queda para los textos que ve el usuario.
+
+## Reglas del juego
+
+- Resultado exacto: **3 pts** · Ganador / empate acertado: **1 pt** · Nada: **0**
+- Categorías excluyentes (cobrás la más alta que aplique).
+- Eliminatorias: cuenta el resultado **con alargue**; multiplicadores por ronda (la final vale más). Si predecís un empate, elegís quién avanza.
+- No se puede crear ni editar una predicción **desde el horario del partido** (anti-trampa validado server-side).
+- Las fechas se muestran siempre en **hora argentina (UTC-3)**.
+
+> El plan completo y las tareas viven en Linear (workspace `prode-arg`).
+
+## Variables de entorno
+
+_Próximamente (Slice 2 en adelante):_ vas a necesitar un archivo `.env.local` con las claves de Supabase y de API-Football. Se documenta acá cuando se implemente.
+
+## Testing
+
+El dominio (motor de scoring, regla de bloqueo) se construye **test-first** (TDD). Corré `bun run test:watch` mientras desarrollás.
