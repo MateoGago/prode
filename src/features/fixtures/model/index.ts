@@ -27,7 +27,7 @@ export const ROUND_MULTIPLIERS: Record<Round, number> = {
 /** A national team participating in the tournament. */
 export interface Team {
   id: string;
-  /** API-Football team id — idempotent upsert key. */
+  /** Stable external key (provider-defined) — idempotent upsert key. */
   externalRef: string;
   name: string;
   /** Group label 'A'..'L'; null for knockout-only placeholders. */
@@ -52,7 +52,7 @@ export type MatchStatus = "scheduled" | "live" | "finished" | "confirmed";
  */
 export interface Match {
   id: string;
-  /** API-Football fixture id — idempotent upsert key. */
+  /** Stable external key (provider-defined) — idempotent upsert key. */
   externalRef: string;
   round: Round;
   /** Denormalized from round so scoring never needs to re-derive it. */

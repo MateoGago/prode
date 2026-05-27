@@ -1,0 +1,36 @@
+name: Sync results
+
+# Pulls the live openfootball dataset and upserts scores + resolved knockout
+# teams into Supabase. Idempotent, so running it off-tournament is harmless.
+on:
+  schedule:
+    - cron: "0 */3 * * *" # every 3 hours (UTC); GitHub may delay under load
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+# A late run is never worth stacking on a still-running one.
+concurrency:
+  group: sync-results
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Secrets live in this GitHub Environment; the job must target it to read them.
+    environment: ci-workflows
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          HUSKY: "0" # skip git-hook setup in CI
+
+      - name: Sync results
+        run: bun run sync
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
