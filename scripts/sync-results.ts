@@ -14,6 +14,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { fetchRemoteDataset } from "../src/features/fixtures/actions/dataset";
 import { syncFixtures } from "../src/features/fixtures/actions/sync-fixtures";
+import { autoConfirmFinished } from "../src/features/results/actions/auto-confirm";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const serviceRole = process.env.SUPABASE_SERVICE_ROLE;
@@ -35,9 +36,14 @@ const data = await fetchRemoteDataset();
 // re-touched here, so a scheduled sync can never clobber that display data.
 await syncFixtures(client, data);
 
+// Confirm the matches that just finished → recompute points (idempotent).
+const { confirmed } = await autoConfirmFinished(client);
+
 const { count } = await client
   .from("matches")
   .select("*", { count: "exact", head: true })
   .neq("status", "scheduled");
 
-console.log(`Done. matches with a result=${count ?? 0}`);
+console.log(
+  `Done. matches with a result=${count ?? 0}, confirmed now=${confirmed}`,
+);
