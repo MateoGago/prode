@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "bun run scripts/seed-fixtures.ts",
+    "sync": "bun run scripts/sync-results.ts",
     "prepare": "husky"
   },
   "dependencies": {
