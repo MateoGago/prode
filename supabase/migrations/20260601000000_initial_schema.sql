@@ -1,17 +1,17 @@
 -- Migration: initial_schema
--- Applies: profiles, teams, matches, predictions tables + leaderboard view + RLS.
+-- Applies: profiles, teams, matches, predictions tables + leaderboard function + RLS.
 -- DO NOT apply manually — run via `supabase db push` (requires Supabase project + credentials).
 -- All timestamps are timestamptz (UTC). Display in America/Argentina/Buenos_Aires is done in the app layer.
 --
--- ⚠ PENDING LIVE VERIFICATION (per the `supabase` skill — requires a real Supabase project):
---   1. Run `supabase db advisors` (or MCP get_advisors) and fix every finding before trusting this.
---   2. points_awarded/scored_at protection: currently a trigger checks current_setting('role').
---      Verify against the project's Data API grant baseline; prefer column-level GRANT/REVOKE if grants allow.
---   3. leaderboard view: intentionally aggregates across all users (it's the ranking) and exposes ONLY
---      non-sensitive aggregates. It must NOT use security_invoker (that would limit it to the caller's own
---      rows). Confirm advisors accept this as a documented exception, or move it behind a SECURITY DEFINER
---      function in a private schema.
---   4. Confirm tables are exposed to the Data API and anon/authenticated grants match this access model.
+-- Advisors: applied to project woahvkzfmfqqaptkazta on 2026-05-27 and verified.
+--   Security: clean except one intentional WARN — get_leaderboard() is a SECURITY DEFINER
+--             function callable by `authenticated` via RPC (that IS the ranking access path).
+--   Performance: FK covering indexes present (flagged "unused" only until real traffic exists).
+-- Decisions baked in here:
+--   - leaderboard is a SECURITY DEFINER function (not a view): it must aggregate across ALL users,
+--     so it bypasses predictions RLS by design while exposing only non-sensitive aggregates.
+--     EXECUTE is revoked from anon/public and granted only to authenticated.
+--   - All functions pin search_path; the signup trigger function has EXECUTE revoked (trigger-only).
 
 -- ============================================================
 -- ENUMS
@@ -154,21 +154,39 @@ COMMENT ON COLUMN public.predictions.advancer_team_id IS
   'Required only for knockout draw predictions. Must be one of the two competing teams.';
 
 -- ============================================================
--- leaderboard VIEW
+-- leaderboard FUNCTION
+-- Aggregates points across ALL users for the ranking. A plain view would either
+-- leak opponents' picks (security_invoker off) or show only the caller's own rows
+-- (security_invoker on). A SECURITY DEFINER function bypasses predictions RLS while
+-- exposing ONLY non-sensitive aggregates, and EXECUTE is gated to authenticated.
 -- ============================================================
 
-CREATE VIEW public.leaderboard AS
-SELECT
-  pr.user_id,
-  p.display_name,
-  COALESCE(SUM(pr.points_awarded), 0)                                 AS total_points,
-  COUNT(*) FILTER (WHERE pr.points_awarded > 0)                       AS hits
-FROM public.profiles p
-LEFT JOIN public.predictions pr ON pr.user_id = p.id
-GROUP BY pr.user_id, p.display_name;
+CREATE OR REPLACE FUNCTION public.get_leaderboard()
+RETURNS TABLE (
+  user_id      uuid,
+  display_name text,
+  total_points bigint,
+  hits         bigint
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT
+    p.id                                            AS user_id,
+    p.display_name,
+    COALESCE(SUM(pr.points_awarded), 0)             AS total_points,
+    COUNT(*) FILTER (WHERE pr.points_awarded > 0)   AS hits
+  FROM public.profiles p
+  LEFT JOIN public.predictions pr ON pr.user_id = p.id
+  GROUP BY p.id, p.display_name;
+$$;
 
-COMMENT ON VIEW public.leaderboard IS
-  'Aggregate points per player. Ranking is total_points DESC; ties share position (no tie-break per decision #260).';
+COMMENT ON FUNCTION public.get_leaderboard() IS
+  'Aggregate points per player across ALL users (bypasses predictions RLS by design). Ranking is total_points DESC; ties share position (no tie-break per decision #260).';
+
+REVOKE EXECUTE ON FUNCTION public.get_leaderboard() FROM anon, public;
+GRANT  EXECUTE ON FUNCTION public.get_leaderboard() TO authenticated;
 
 -- ============================================================
 -- TRIGGER: keep predictions.updated_at current
@@ -177,6 +195,7 @@ COMMENT ON VIEW public.leaderboard IS
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 BEGIN
   NEW.updated_at = now();
@@ -198,6 +217,7 @@ CREATE TRIGGER predictions_updated_at
 CREATE OR REPLACE FUNCTION public.guard_points_awarded()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 BEGIN
   -- On INSERT: force to 0 (ignore any client-supplied value).
@@ -335,3 +355,17 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
+
+-- Trigger-only: must never be callable via the Data API (/rest/v1/rpc/handle_new_user).
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM anon, authenticated, public;
+
+-- ============================================================
+-- COVERING INDEXES FOR FOREIGN KEYS
+-- ============================================================
+
+CREATE INDEX idx_matches_home_team_id           ON public.matches (home_team_id);
+CREATE INDEX idx_matches_away_team_id           ON public.matches (away_team_id);
+CREATE INDEX idx_matches_penalty_winner_team_id ON public.matches (penalty_winner_team_id);
+CREATE INDEX idx_matches_advancer_team_id       ON public.matches (advancer_team_id);
+CREATE INDEX idx_predictions_match_id           ON public.predictions (match_id);
+CREATE INDEX idx_predictions_advancer_team_id   ON public.predictions (advancer_team_id);
