@@ -2,6 +2,10 @@
 // Pure rules + types live in entities/; the save action is the I/O shell.
 
 export { savePrediction } from "./actions/save-prediction";
+export { MatchCard } from "./components/match-card";
+export { GroupSection } from "./components/group-section";
+export type { MatchCardProps } from "./components/match-card";
+export type { GroupSectionProps } from "./components/group-section";
 export type {
   MatchContext,
   MatchKickoffContext,
