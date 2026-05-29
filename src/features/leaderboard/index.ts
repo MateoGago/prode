@@ -11,7 +11,12 @@ export {
   type MatchBreakdownListProps,
 } from "./components/match-breakdown-list";
 export { getLeaderboard } from "./actions/get-leaderboard";
+export { getMatchBreakdown } from "./actions/get-match-breakdown";
 export {
   mapLeaderboardRows,
   type GetLeaderboardRpcRow,
 } from "./entities/leaderboard";
+export {
+  mapMatchBreakdown,
+  type BreakdownPredictionRow,
+} from "./entities/match-breakdown";
