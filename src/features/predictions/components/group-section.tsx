@@ -31,10 +31,10 @@ export function GroupSection({
 }: GroupSectionProps) {
   const totalMatches = matches.length;
 
-  if (matches.length === 0) {
+  if (totalMatches === 0) {
     return (
       <section className="grid gap-4">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight">
+        <h2 className="text-2xl font-bold tracking-tight">
           Grupo {groupLabel}
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -47,7 +47,7 @@ export function GroupSection({
   return (
     <section className="grid gap-4">
       <div className="grid gap-1">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight">
+        <h2 className="text-2xl font-bold tracking-tight">
           Grupo {groupLabel}
         </h2>
         <p className="text-sm text-muted-foreground">
