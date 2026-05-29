@@ -4,8 +4,13 @@
 export { savePrediction } from "./actions/save-prediction";
 export { MatchCard } from "./components/match-card";
 export { GroupSection } from "./components/group-section";
+export { PredictionsPageClient } from "./components/predictions-page-client";
 export type { MatchCardProps } from "./components/match-card";
 export type { GroupSectionProps } from "./components/group-section";
+export type {
+  GroupBlock,
+  PredictionsPageClientProps,
+} from "./components/predictions-page-client";
 export type {
   MatchContext,
   MatchKickoffContext,
