@@ -10,3 +10,8 @@ export {
   type MatchBreakdownItem,
   type MatchBreakdownListProps,
 } from "./components/match-breakdown-list";
+export { getLeaderboard } from "./actions/get-leaderboard";
+export {
+  mapLeaderboardRows,
+  type GetLeaderboardRpcRow,
+} from "./entities/leaderboard";

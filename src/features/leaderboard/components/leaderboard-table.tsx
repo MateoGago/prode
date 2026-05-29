@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
 export type LeaderboardRow = {
@@ -12,6 +14,10 @@ export type LeaderboardTableProps = {
   rows: LeaderboardRow[];
   emptyMessage?: string;
   ariaLabel?: string;
+  /** When provided, wraps the player name cell in a Next.js Link. */
+  getPlayerHref?: (row: LeaderboardRow) => string;
+  /** When set, the matching row receives a highlight background and aria-current="true". */
+  highlightPlayerId?: string;
 };
 
 type RankedLeaderboardRow = LeaderboardRow & {
@@ -39,6 +45,8 @@ export function LeaderboardTable({
   rows,
   emptyMessage,
   ariaLabel = "Tabla de posiciones",
+  getPlayerHref,
+  highlightPlayerId,
 }: LeaderboardTableProps) {
   if (rows.length === 0) {
     return (
@@ -82,17 +90,35 @@ export function LeaderboardTable({
               </tr>
             </thead>
             <tbody>
-              {rankedRows.map((row) => (
-                <tr key={row.playerId} className="border-b last:border-0">
-                  <td className="px-3 py-2 font-semibold tabular-nums">
-                    {row.rank}
-                  </td>
-                  <td className="px-3 py-2">{row.playerName}</td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    {row.totalPoints}
-                  </td>
-                </tr>
-              ))}
+              {rankedRows.map((row) => {
+                const isHighlighted = highlightPlayerId === row.playerId;
+                return (
+                  <tr
+                    key={row.playerId}
+                    className={`border-b last:border-0${isHighlighted ? " bg-primary/10" : ""}`}
+                    aria-current={isHighlighted ? "true" : undefined}
+                  >
+                    <td className="px-3 py-2 font-semibold tabular-nums">
+                      {row.rank}
+                    </td>
+                    <td className="px-3 py-2">
+                      {getPlayerHref ? (
+                        <Link
+                          href={getPlayerHref(row)}
+                          className="font-medium text-primary underline-offset-4 hover:underline focus-visible:underline"
+                        >
+                          {row.playerName}
+                        </Link>
+                      ) : (
+                        row.playerName
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                      {row.totalPoints}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
