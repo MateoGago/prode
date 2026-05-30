@@ -1,0 +1,93 @@
+import { getLeaderboard, getMatchBreakdown } from "@/features/leaderboard";
+import {
+  mapMatchRow,
+  type MatchWithTeamsRow,
+} from "@/features/predictions/entities/predictions-page";
+import { createClient } from "@/shared/supabase/server";
+
+import {
+  countPendingPredictions,
+  derivePlayerStats,
+  mapLastResults,
+  selectNextMatch,
+  type LastResultRow,
+  type PlayerStats,
+} from "../entities/inicio";
+import type { Match } from "@/features/fixtures/entities/match";
+
+export interface DashboardData {
+  stats: PlayerStats;
+  /** Total fixtures in the tournament — denominator for "jugados N/total". */
+  totalMatches: number;
+  /** Confirmed predictions the player has scored — "jugados" numerator. */
+  played: number;
+  nextMatch: Match | null;
+  pendingPredictions: number;
+  lastResults: LastResultRow[];
+}
+
+/**
+ * Composes the "Inicio" dashboard from existing feature reads — no new domain
+ * logic, just orchestration. Pure derivation lives in entities/inicio.ts.
+ */
+export async function getDashboard(
+  userId: string,
+  now: Date = new Date(),
+): Promise<DashboardData> {
+  const supabase = await createClient();
+
+  // Independent reads — run in parallel to avoid a request waterfall.
+  const [matchesResult, predictionsResult, leaderboard, breakdown] =
+    await Promise.all([
+      supabase
+        .from("matches")
+        .select(
+          `
+          id, external_ref, round, multiplier, matchday,
+          home_placeholder, away_placeholder, kickoff_at, status,
+          home_score, away_score, result_confirmed_at,
+          home_team:teams!matches_home_team_id_fkey (
+            id, external_ref, name, group_label, flag_url
+          ),
+          away_team:teams!matches_away_team_id_fkey (
+            id, external_ref, name, group_label, flag_url
+          )
+        `,
+        )
+        .order("kickoff_at", { ascending: true }),
+      supabase.from("predictions").select("match_id").eq("user_id", userId),
+      getLeaderboard(),
+      getMatchBreakdown(userId),
+    ]);
+
+  if (matchesResult.error) {
+    throw new Error(`load matches failed: ${matchesResult.error.message}`);
+  }
+  if (predictionsResult.error) {
+    throw new Error(
+      `load predictions failed: ${predictionsResult.error.message}`,
+    );
+  }
+
+  const matches = ((matchesResult.data ?? []) as MatchWithTeamsRow[]).map(
+    mapMatchRow,
+  );
+  const predictedMatchIds = new Set(
+    ((predictionsResult.data ?? []) as { match_id: string }[]).map(
+      (r) => r.match_id,
+    ),
+  );
+
+  return {
+    stats: derivePlayerStats(leaderboard, userId),
+    totalMatches: matches.length,
+    played: breakdown.length,
+    nextMatch: selectNextMatch(matches, now),
+    pendingPredictions: countPendingPredictions(
+      matches,
+      predictedMatchIds,
+      now,
+    ),
+    lastResults: mapLastResults(breakdown),
+  };
+}

@@ -48,3 +48,68 @@ export function formatAR(instant: Date | string): string {
 
   return `${day}/${month}/${year} ${hour}:${minute}`;
 }
+
+/**
+ * Format a kickoff for the dashboard hero lock line: short AR weekday +
+ * "d/M · HH:mm", e.g. "Sáb 13/6 · 16:00". Day/month are unpadded (no leading
+ * zeros) to match the approved proof; the time stays zero-padded 24h.
+ */
+export function formatKickoffLong(instant: Date | string): string {
+  const date = typeof instant === "string" ? new Date(instant) : instant;
+
+  const parts = new Intl.DateTimeFormat("es-AR", {
+    timeZone: AR_TIMEZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+
+  // es-AR weekday short is lowercase "sáb." with a trailing dot — capitalize
+  // and strip the dot for the proof's "Sáb" look.
+  const weekday = get("weekday").replace(/\.$/, "");
+  const weekdayTitle = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const day = get("day");
+  const month = get("month");
+  const hour = get("hour");
+  const minute = get("minute");
+
+  return `${weekdayTitle} ${day}/${month} · ${hour}:${minute}`;
+}
+
+const MS_PER_MINUTE = 60_000;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
+
+/**
+ * Human countdown for a kickoff/lock deadline, given the remaining milliseconds.
+ *
+ * Pure (no `Date.now()`): the caller owns "now" so it ticks live in a client
+ * component and stays trivially testable.
+ *
+ * @returns
+ *   - "Cerrado" once the deadline has passed (remaining <= 0)
+ *   - "Xd" when a full day or more remains
+ *   - "Xh Ym" when under a day
+ *   - "Xm" when under an hour (rounded up so it never reads "0m" while still open)
+ */
+export function formatCountdown(remainingMs: number): string {
+  if (remainingMs <= 0) return "Cerrado";
+
+  if (remainingMs >= MS_PER_DAY) {
+    return `${Math.floor(remainingMs / MS_PER_DAY)}d`;
+  }
+
+  if (remainingMs >= MS_PER_HOUR) {
+    const hours = Math.floor(remainingMs / MS_PER_HOUR);
+    const minutes = Math.floor((remainingMs % MS_PER_HOUR) / MS_PER_MINUTE);
+    return `${hours}h ${minutes}m`;
+  }
+
+  // Under an hour: round up so a partial minute still shows "1m", never "0m".
+  return `${Math.max(1, Math.ceil(remainingMs / MS_PER_MINUTE))}m`;
+}
