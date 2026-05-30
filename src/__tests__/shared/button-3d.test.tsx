@@ -18,6 +18,8 @@ describe("Button 3D tactile variants", () => {
     expect(button).toHaveClass("shadow-3d");
     expect(button).toHaveClass("rounded-pill");
     expect(button).toHaveClass("bg-primary");
+    // border-0 keeps the face flush on the 3D shadow (no white hairline)
+    expect(button).toHaveClass("border-0");
   });
 
   it("renders a pop-gol celebration variant using the gol tokens", () => {
@@ -26,6 +28,7 @@ describe("Button 3D tactile variants", () => {
     expect(button).toHaveClass("bg-gol");
     expect(button).toHaveClass("shadow-3d");
     expect(button).toHaveClass("rounded-pill");
+    expect(button).toHaveClass("border-0");
   });
 
   it("renders a pop-ghost variant with white bg and ink text", () => {
@@ -42,6 +45,7 @@ describe("Button 3D tactile variants", () => {
     expect(button).toHaveClass("text-white");
     expect(button).toHaveClass("shadow-3d-danger");
     expect(button).toHaveClass("rounded-pill");
+    expect(button).toHaveClass("border-0");
     expect(button).toHaveClass("active:not-aria-[haspopup]:translate-y-[5px]");
   });
 
