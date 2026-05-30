@@ -19,8 +19,14 @@ export interface MatchRow {
   matchday: number | null;
   home_team_id: string | null;
   away_team_id: string | null;
-  home_placeholder: string | null;
-  away_placeholder: string | null;
+  /**
+   * Only present when the placeholder is set (non-null).
+   * Omitting these on upsert preserves the existing DB value so the original
+   * slot label ("1A", "W73") is never overwritten with null when the team
+   * resolves — satisfying the AC: "el placeholder original se conserva".
+   */
+  home_placeholder?: string;
+  away_placeholder?: string;
   kickoff_at: string;
   status: string;
   home_score: number | null;
@@ -45,6 +51,11 @@ export function teamToRow(team: Team): TeamRow {
  * Maps a domain Match to its `matches` table row, resolving each team's
  * externalRef to its DB uuid. Unknown refs (and knockout placeholders) resolve
  * to null, leaving the placeholder strings to identify the slot.
+ *
+ * Placeholder columns are ONLY included in the row when they carry a value.
+ * Omitting them on upsert (onConflict: "external_ref") means Postgres keeps
+ * the existing column value — so the original slot label ("1A", "W73") is
+ * never overwritten with null when the team resolves during a sync.
  */
 export function matchToRow(
   match: Match,
@@ -53,15 +64,13 @@ export function matchToRow(
   const resolve = (team: Team | null): string | null =>
     team ? (teamIdByRef.get(team.externalRef) ?? null) : null;
 
-  return {
+  const row: MatchRow = {
     external_ref: match.externalRef,
     round: match.round,
     multiplier: match.multiplier,
     matchday: match.matchday,
     home_team_id: resolve(match.homeTeam),
     away_team_id: resolve(match.awayTeam),
-    home_placeholder: match.homePlaceholder,
-    away_placeholder: match.awayPlaceholder,
     kickoff_at: match.kickoffAt.toISOString(),
     status: match.status,
     home_score: match.homeScore,
@@ -69,4 +78,15 @@ export function matchToRow(
     penalty_winner_team_id: resolve(match.penaltyWinnerTeam),
     advancer_team_id: resolve(match.advancerTeam),
   };
+
+  // Include placeholders only when non-null so the upsert never overwrites an
+  // existing slot label with null (preserves original "1A", "W73" etc. in DB).
+  if (match.homePlaceholder !== null) {
+    row.home_placeholder = match.homePlaceholder;
+  }
+  if (match.awayPlaceholder !== null) {
+    row.away_placeholder = match.awayPlaceholder;
+  }
+
+  return row;
 }
