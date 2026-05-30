@@ -20,6 +20,7 @@ export async function getMatchBreakdown(
        match:matches!predictions_match_id_fkey(
          home_score,
          away_score,
+         multiplier,
          status,
          kickoff_at,
          home_team:teams!matches_home_team_id_fkey(name),
