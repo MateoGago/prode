@@ -23,7 +23,7 @@ function groupCtx(kickoffAt: Date): MatchKickoffContext {
 }
 
 function koCtx(kickoffAt: Date): MatchKickoffContext {
-  return { round: "round_of_16", homeTeamId: "h", awayTeamId: "a", kickoffAt };
+  return { round: "r16", homeTeamId: "h", awayTeamId: "a", kickoffAt };
 }
 
 function item(matchId: string, partial: Partial<UpsertItem> = {}): UpsertItem {
