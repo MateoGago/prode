@@ -17,20 +17,10 @@ export default async function LoginPage() {
   if (user) redirect("/");
 
   return (
-    <main className="relative grid min-h-dvh place-items-center overflow-hidden px-4 py-10">
-      {/* Atmospheric stadium-night backdrop */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.07] via-transparent to-transparent"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-32 left-1/2 -z-10 size-[36rem] -translate-x-1/2 rounded-full bg-primary/15 blur-[120px]"
-      />
-
-      <section className="relative w-full max-w-sm">
+    <main className="grid min-h-dvh place-items-center px-4 py-10">
+      <section className="w-full max-w-sm animate-[rise_0.55s_var(--ease-bounce)_forwards]">
         <header className="mb-8 text-center">
-          <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-primary">
+          <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
             Mundial 2026
           </span>
           <h1 className="mt-4 font-[family-name:var(--font-display)] text-6xl font-extrabold leading-none tracking-tight">
@@ -41,7 +31,8 @@ export default async function LoginPage() {
           </p>
         </header>
 
-        <div className="rounded-2xl border bg-card/70 p-6 shadow-xl backdrop-blur-sm sm:p-7">
+        {/* Cancha Pop card — solid white, shadow-card, rounded-2xl */}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-7">
           <AuthForm />
         </div>
 
