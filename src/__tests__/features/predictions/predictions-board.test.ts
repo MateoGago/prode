@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveProgress } from "@/features/predictions/entities/predictions-board";
+import {
+  deriveCardState,
+  deriveProgress,
+} from "@/features/predictions/entities/predictions-board";
+import type { LockInfo } from "@/features/predictions/entities/predictions-board";
+import type { PredictionInput } from "@/features/predictions/entities/prediction";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,5 +99,82 @@ describe("deriveProgress (REQ-01)", () => {
     ];
     const result = deriveProgress(otherDayMatches, {}, now);
     expect(result.cierranHoy).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-02 + REQ-03: deriveCardState
+// ---------------------------------------------------------------------------
+
+describe("deriveCardState (REQ-02 + REQ-03)", () => {
+  const OPEN: LockInfo = { editable: true };
+  const LOCKED: LockInfo = { editable: false, reason: "kickoff" };
+  const LIVE: LockInfo = { editable: false, reason: "live" };
+  const CONFIRMED: LockInfo = { editable: false, reason: "confirmed" };
+
+  const saved: PredictionInput = {
+    homeScore: 1,
+    awayScore: 0,
+    advancerTeamId: null,
+  };
+  const sameAsaved: PredictionInput = {
+    homeScore: 1,
+    awayScore: 0,
+    advancerTeamId: null,
+  };
+  const different: PredictionInput = {
+    homeScore: 2,
+    awayScore: 0,
+    advancerTeamId: null,
+  };
+
+  it("sin-cargar (empty): saved=null AND working=undefined", () => {
+    expect(deriveCardState(null, undefined, OPEN)).toBe("empty");
+  });
+
+  it("sin-guardar (dirty): working differs from saved (saved non-null)", () => {
+    expect(deriveCardState(saved, different, OPEN)).toBe("dirty");
+  });
+
+  it("sin-guardar (dirty): saved=null AND working defined", () => {
+    expect(
+      deriveCardState(
+        null,
+        { homeScore: 0, awayScore: 0, advancerTeamId: null },
+        OPEN,
+      ),
+    ).toBe("dirty");
+  });
+
+  it("guardado (saved): working equals saved AND saved is not null", () => {
+    expect(deriveCardState(saved, sameAsaved, OPEN)).toBe("saved");
+  });
+
+  it("re-edit of guardado → sin-guardar", () => {
+    // Start: guardado state
+    expect(deriveCardState(saved, sameAsaved, OPEN)).toBe("saved");
+    // User edits: working differs
+    expect(deriveCardState(saved, different, OPEN)).toBe("dirty");
+  });
+
+  it("saved + open match → editable=true (REQ-03)", () => {
+    // editable is conveyed through LockInfo — deriveCardState returns "saved" not "locked"
+    expect(deriveCardState(saved, sameAsaved, OPEN)).toBe("saved");
+  });
+
+  it("saved + locked match → locked state (REQ-03)", () => {
+    expect(deriveCardState(saved, sameAsaved, LOCKED)).toBe("locked");
+  });
+
+  it("unsaved + locked match → locked state (REQ-03)", () => {
+    expect(deriveCardState(null, undefined, LOCKED)).toBe("locked");
+  });
+
+  it("live match → live state", () => {
+    expect(deriveCardState(saved, sameAsaved, LIVE)).toBe("live");
+  });
+
+  it("confirmed match → confirmed state", () => {
+    expect(deriveCardState(saved, sameAsaved, CONFIRMED)).toBe("confirmed");
   });
 });
