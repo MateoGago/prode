@@ -258,6 +258,12 @@ export function filterPredicate(
     case "pendientes": {
       const saved = savedMap[matchId] ?? null;
       const working = workingMap[matchId];
+      // For open matches: not-yet-saved (empty) or edited-not-yet-saved (dirty).
+      // For locked matches: include if there is still no saved prediction — the
+      // user never got a chance to save it (REQ-05: locked-unsaved → Pendientes).
+      if (!lock.editable) {
+        return saved === null;
+      }
       const state = deriveCardState(saved, working, lock);
       return state === "empty" || state === "dirty";
     }

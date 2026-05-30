@@ -4,6 +4,7 @@ import {
   deriveCardState,
   deriveProgress,
   dirtySet,
+  filterPredicate,
   isDirty,
   selectBatch,
 } from "@/features/predictions/entities/predictions-board";
@@ -354,5 +355,180 @@ describe("selectBatch (REQ-04, REQ-07)", () => {
     };
     const result = selectBatch(workingMap, {}, new Set());
     expect(result[0].advancerTeamId).toBe("team-a");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-05: filterPredicate
+// ---------------------------------------------------------------------------
+
+describe("filterPredicate (REQ-05)", () => {
+  const OPEN: LockInfo = { editable: true };
+  const LOCKED: LockInfo = { editable: false, reason: "kickoff" };
+
+  const NOW = new Date("2026-06-15T12:00:00.000Z");
+  const FUTURE_24H = new Date("2026-06-16T11:00:00.000Z"); // within 24h of NOW
+  const FUTURE_FAR = new Date("2026-06-20T18:00:00.000Z"); // outside 24h
+  const PAST = new Date("2026-06-14T18:00:00.000Z");
+
+  const savedPred: PredictionInput = {
+    homeScore: 1,
+    awayScore: 0,
+    advancerTeamId: null,
+  };
+
+  // "todos" filter
+  it("todos: includes every match regardless of state", () => {
+    expect(filterPredicate("todos", "m1", {}, {}, OPEN, FUTURE_FAR, NOW)).toBe(
+      true,
+    );
+    expect(
+      filterPredicate(
+        "todos",
+        "m1",
+        { m1: savedPred },
+        {},
+        OPEN,
+        FUTURE_FAR,
+        NOW,
+      ),
+    ).toBe(true);
+    expect(filterPredicate("todos", "m1", {}, {}, LOCKED, PAST, NOW)).toBe(
+      true,
+    );
+  });
+
+  // "pendientes" filter
+  it("pendientes: includes empty (sin-cargar) matches", () => {
+    expect(
+      filterPredicate("pendientes", "m1", {}, {}, OPEN, FUTURE_FAR, NOW),
+    ).toBe(true);
+  });
+
+  it("pendientes: includes dirty (sin-guardar) matches", () => {
+    const workingMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 2, awayScore: 0, advancerTeamId: null },
+    };
+    expect(
+      filterPredicate(
+        "pendientes",
+        "m1",
+        { m1: savedPred },
+        workingMap,
+        OPEN,
+        FUTURE_FAR,
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("pendientes: excludes guardado matches", () => {
+    const sameAsaved: PredictionInput = {
+      homeScore: 1,
+      awayScore: 0,
+      advancerTeamId: null,
+    };
+    const workingMap: Record<string, PredictionInput> = { m1: sameAsaved };
+    expect(
+      filterPredicate(
+        "pendientes",
+        "m1",
+        { m1: savedPred },
+        workingMap,
+        OPEN,
+        FUTURE_FAR,
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("pendientes: locked match with no saved prediction IS included (REQ-05)", () => {
+    // A match that locked before the user saved it is still "pending"
+    expect(filterPredicate("pendientes", "m1", {}, {}, LOCKED, PAST, NOW)).toBe(
+      true,
+    );
+  });
+
+  it("pendientes: locked match WITH a saved prediction is NOT pendiente", () => {
+    const sameAsaved: PredictionInput = {
+      homeScore: 1,
+      awayScore: 0,
+      advancerTeamId: null,
+    };
+    const workingMap: Record<string, PredictionInput> = { m1: sameAsaved };
+    expect(
+      filterPredicate(
+        "pendientes",
+        "m1",
+        { m1: savedPred },
+        workingMap,
+        LOCKED,
+        PAST,
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  // "cierran-pronto" filter
+  it("cierran-pronto: includes match within next 24h", () => {
+    expect(
+      filterPredicate("cierran-pronto", "m1", {}, {}, OPEN, FUTURE_24H, NOW),
+    ).toBe(true);
+  });
+
+  it("cierran-pronto: excludes match further than 24h away", () => {
+    expect(
+      filterPredicate("cierran-pronto", "m1", {}, {}, OPEN, FUTURE_FAR, NOW),
+    ).toBe(false);
+  });
+
+  it("cierran-pronto: excludes past matches (already kicked off)", () => {
+    expect(
+      filterPredicate("cierran-pronto", "m1", {}, {}, LOCKED, PAST, NOW),
+    ).toBe(false);
+  });
+
+  // "guardados" filter
+  it("guardados: includes saved match (working = saved)", () => {
+    const sameAsaved: PredictionInput = {
+      homeScore: 1,
+      awayScore: 0,
+      advancerTeamId: null,
+    };
+    const workingMap: Record<string, PredictionInput> = { m1: sameAsaved };
+    expect(
+      filterPredicate(
+        "guardados",
+        "m1",
+        { m1: savedPred },
+        workingMap,
+        OPEN,
+        FUTURE_FAR,
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("guardados: excludes dirty match", () => {
+    const workingMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 2, awayScore: 0, advancerTeamId: null },
+    };
+    expect(
+      filterPredicate(
+        "guardados",
+        "m1",
+        { m1: savedPred },
+        workingMap,
+        OPEN,
+        FUTURE_FAR,
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("guardados: excludes empty (never loaded) match", () => {
+    expect(
+      filterPredicate("guardados", "m1", {}, {}, OPEN, FUTURE_FAR, NOW),
+    ).toBe(false);
   });
 });
