@@ -14,6 +14,13 @@ export type StepperProps = {
   disabled?: boolean;
   label?: string;
   size?: "sm" | "default";
+  /**
+   * When set, render this placeholder (e.g. "–") instead of the numeric value.
+   * Used by the predictions card to show an "empty / sin-cargar" state.
+   */
+  placeholder?: string;
+  /** Force-disable just the decrement button (independent of `disabled`). */
+  decrementDisabled?: boolean;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -37,6 +44,8 @@ export function Stepper({
   disabled = false,
   label,
   size = "default",
+  placeholder,
+  decrementDisabled = false,
 }: StepperProps) {
   const s = sizeClass[size];
 
@@ -48,6 +57,7 @@ export function Stepper({
 
   const atMin = value <= min;
   const atMax = value >= max;
+  const decDisabled = disabled || atMin || decrementDisabled;
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: a stepper is a labelled group of two buttons; role="group" + aria-label is the correct ARIA — no native element fits without a legend.
@@ -59,9 +69,9 @@ export function Stepper({
       <motion.button
         type="button"
         aria-label={`Restar a ${label ?? "valor"}`}
-        disabled={disabled || atMin}
+        disabled={decDisabled}
         onClick={() => change(value - step)}
-        whileTap={disabled || atMin ? undefined : { scale: 0.92 }}
+        whileTap={decDisabled ? undefined : { scale: 0.92 }}
         transition={popSpring}
         className={cn(stepButton, s.btn, "text-muted-foreground")}
       >
@@ -76,7 +86,7 @@ export function Stepper({
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
-            key={value}
+            key={placeholder ?? value}
             initial={{ scale: 0.6, opacity: 0 }}
             animate={{ scale: [1, 1.22, 1], opacity: 1 }}
             exit={{ scale: 0.6, opacity: 0 }}
@@ -86,9 +96,12 @@ export function Stepper({
               ...popSpring,
               scale: { duration: 0.28, ease: "easeOut", times: [0, 0.55, 1] },
             }}
-            className="inline-block"
+            className={cn(
+              "inline-block",
+              placeholder !== undefined && "text-muted-foreground/50",
+            )}
           >
-            {value}
+            {placeholder ?? value}
           </motion.span>
         </AnimatePresence>
       </div>

@@ -5,25 +5,15 @@ import { useState } from "react";
 import { motion } from "motion/react";
 
 import type { Match } from "@/features/fixtures/entities/match";
-import type {
-  PredictionError,
-  PredictionInput,
-} from "@/features/predictions/entities/prediction";
 import { filterPredicate } from "@/features/predictions/entities/predictions-board";
 import { useReveal } from "@/shared/motion";
 
-import { MatchCard } from "./match-card";
+import { MatchCardConnected } from "./match-card-connected";
 import { usePredictionsBoard } from "./predictions-provider";
 
 export type GroupSectionProps = {
   groupLabel: string;
   matches: Match[];
-  predictionsByMatchId?: Record<string, PredictionInput | null>;
-  lockedMatchIds?: Set<string>;
-  errorsByMatchId?: Record<string, PredictionError | "locked" | null>;
-  savingMatchIds?: Set<string>;
-  onMatchChange: (matchId: string, next: PredictionInput) => void;
-  onMatchSubmit?: (matchId: string) => void;
 };
 
 /** Cancha Pop ".grouplabel": badge letter + title + match-count meta. */
@@ -55,16 +45,7 @@ function GroupLabel({
   );
 }
 
-export function GroupSection({
-  groupLabel,
-  matches,
-  predictionsByMatchId,
-  lockedMatchIds,
-  errorsByMatchId,
-  savingMatchIds,
-  onMatchChange,
-  onMatchSubmit,
-}: GroupSectionProps) {
+export function GroupSection({ groupLabel, matches }: GroupSectionProps) {
   const { rise, staggerContainer } = useReveal();
   const totalMatches = matches.length;
 
@@ -165,28 +146,11 @@ export function GroupSection({
         >
           {matches
             .filter((m) => visibleMatchIds.has(m.id))
-            .map((match) => {
-              const prediction = predictionsByMatchId?.[match.id] ?? null;
-              const isLocked = lockedMatchIds?.has(match.id) ?? false;
-              const error = errorsByMatchId?.[match.id] ?? null;
-              const saving = savingMatchIds?.has(match.id) ?? false;
-
-              return (
-                <motion.div key={match.id} variants={rise}>
-                  <MatchCard
-                    match={match}
-                    prediction={prediction}
-                    isLocked={isLocked}
-                    error={error}
-                    saving={saving}
-                    onChange={(next) => onMatchChange(match.id, next)}
-                    onSubmit={
-                      onMatchSubmit ? () => onMatchSubmit(match.id) : undefined
-                    }
-                  />
-                </motion.div>
-              );
-            })}
+            .map((match) => (
+              <motion.div key={match.id} variants={rise}>
+                <MatchCardConnected match={match} />
+              </motion.div>
+            ))}
         </motion.div>
       )}
     </section>

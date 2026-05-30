@@ -10,13 +10,10 @@ import {
   type HitType,
   shouldShowAdvancer,
 } from "@/features/predictions/entities/match-card-state";
-import type {
-  PredictionError,
-  PredictionInput,
-} from "@/features/predictions/entities/prediction";
+import type { PredictionInput } from "@/features/predictions/entities/prediction";
+import type { CardState } from "@/features/predictions/entities/predictions-board";
 import { formatAR } from "@/shared/datetime";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
 import { TeamFlag } from "@/shared/ui/team-flag";
 
 import { AdvancerPicker } from "./advancer-picker";
@@ -24,12 +21,20 @@ import { ScoreControl } from "./score-control";
 
 export type MatchCardProps = {
   match: Match;
+  cardState: CardState;
   prediction: PredictionInput | null;
-  isLocked: boolean;
-  error?: PredictionError | "locked" | null;
-  saving?: boolean;
+  error?: string | null;
   onChange: (next: PredictionInput) => void;
-  onSubmit?: () => void;
+};
+
+/** Known prediction-error reasons we map to friendly Spanish copy. */
+const ERROR_MESSAGES: Record<string, string> = {
+  negative_score: "Los goles no pueden ser negativos.",
+  non_integer_score: "Los goles deben ser números enteros.",
+  advancer_required: "En empate de eliminatoria, elegí quién avanza.",
+  advancer_not_competing: "El equipo que avanza debe ser uno de los que juega.",
+  advancer_not_allowed: "Solo se elige quién avanza en empate de eliminatoria.",
+  locked: "Este partido ya empezó. La predicción está bloqueada.",
 };
 
 const ROUND_LABELS: Record<Round, string> = {
@@ -48,23 +53,15 @@ const HIT_LABELS: Record<HitType, string> = {
   miss: "Erró",
 };
 
-function mapErrorMessage(
-  error?: PredictionError | "locked" | null,
-): string | null {
+/**
+ * Maps a raw save-failure reason (a PredictionError, "locked",
+ * "match_not_found", "unauthenticated", or anything unexpected) to friendly
+ * Spanish copy. Unknown reasons fall back to a generic message so the user
+ * always sees something actionable instead of a blank alert.
+ */
+function mapErrorMessage(error?: string | null): string | null {
   if (!error) return null;
-
-  const messages: Record<PredictionError | "locked", string> = {
-    negative_score: "Los goles no pueden ser negativos.",
-    non_integer_score: "Los goles deben ser números enteros.",
-    advancer_required: "En empate de eliminatoria, elegí quién avanza.",
-    advancer_not_competing:
-      "El equipo que avanza debe ser uno de los que juega.",
-    advancer_not_allowed:
-      "Solo se elige quién avanza en empate de eliminatoria.",
-    locked: "Este partido ya empezó. La predicción está bloqueada.",
-  };
-
-  return messages[error];
+  return ERROR_MESSAGES[error] ?? "No se pudo guardar. Probá de nuevo.";
 }
 
 function normalizeScore(value: number) {
@@ -80,6 +77,7 @@ function TeamColumn({
   flagUrl,
   score,
   controlsDisabled,
+  empty,
   onDecrement,
   onIncrement,
   scoreId,
@@ -88,6 +86,7 @@ function TeamColumn({
   flagUrl: string | null;
   score: number;
   controlsDisabled: boolean;
+  empty: boolean;
   onDecrement: () => void;
   onIncrement: () => void;
   scoreId: string;
@@ -101,6 +100,7 @@ function TeamColumn({
       <ScoreControl
         value={score}
         disabled={controlsDisabled}
+        empty={empty}
         onDecrement={onDecrement}
         onIncrement={onIncrement}
         teamName={name}
@@ -208,12 +208,10 @@ function ConfirmedPanel({
 
 export function MatchCard({
   match,
+  cardState,
   prediction,
-  isLocked,
   error = null,
-  saving = false,
   onChange,
-  onSubmit,
 }: MatchCardProps) {
   const homeName = match.homeTeam?.name ?? "Equipo por definir";
   const awayName = match.awayTeam?.name ?? "Equipo por definir";
@@ -224,28 +222,30 @@ export function MatchCard({
   const homeScoreId = `${match.id}-home-score`;
   const awayScoreId = `${match.id}-away-score`;
 
-  const isConfirmed =
-    match.resultConfirmedAt !== null &&
-    match.homeScore !== null &&
-    match.awayScore !== null;
-  const isLive = !isConfirmed && match.status === "live";
+  // Frozen states come straight from the derived cardState (lock authority is
+  // Postgres; cardState already folds live/confirmed/locked together).
+  const isConfirmed = cardState === "confirmed";
 
-  const state: "open" | "locked" | "live" | "confirmed" = isConfirmed
-    ? "confirmed"
-    : isLive
-      ? "live"
-      : isLocked
-        ? "locked"
-        : "open";
+  // TopChips speaks "open" for every editable state (empty/dirty/saved); the
+  // three frozen states pass through unchanged.
+  const chipState: "open" | "locked" | "live" | "confirmed" =
+    cardState === "live" || cardState === "confirmed" || cardState === "locked"
+      ? cardState
+      : "open";
 
-  const controlsDisabled = isLocked || saving || isConfirmed || isLive;
+  // Constraint B: "saved" is editable — only the frozen states disable controls.
+  const controlsDisabled =
+    cardState === "locked" || cardState === "live" || cardState === "confirmed";
+
+  // Empty (sin-cargar): no value yet — steppers show "–" and decrement is off.
+  const isEmpty = cardState === "empty" && prediction === null;
+
   const message = mapErrorMessage(error);
 
   const showAdvancer = shouldShowAdvancer(match.round, homeScore, awayScore);
   const advancerOptions = [match.homeTeam, match.awayTeam].filter(
     (t): t is NonNullable<typeof t> => t !== null,
   );
-  const celebration = match.round !== "group";
 
   function setHomeScore(nextValue: number) {
     onChange({
@@ -285,12 +285,12 @@ export function MatchCard({
     <article
       className={cn(
         "relative overflow-hidden rounded-3xl bg-card p-4 shadow-card",
-        state === "locked" && "opacity-95",
+        cardState === "locked" && "opacity-95",
       )}
     >
-      <TopChips match={match} state={state} />
+      <TopChips match={match} state={chipState} />
 
-      {state === "confirmed" ? (
+      {isConfirmed ? (
         <>
           {/* Two-column flag → name header, same structure as editable states */}
           <div className="flex items-center gap-2 py-1">
@@ -337,6 +337,7 @@ export function MatchCard({
               flagUrl={match.homeTeam?.flagUrl ?? null}
               score={homeScore}
               controlsDisabled={controlsDisabled}
+              empty={isEmpty}
               scoreId={homeScoreId}
               onDecrement={() => setHomeScore(homeScore - 1)}
               onIncrement={() => setHomeScore(homeScore + 1)}
@@ -351,6 +352,7 @@ export function MatchCard({
               flagUrl={match.awayTeam?.flagUrl ?? null}
               score={awayScore}
               controlsDisabled={controlsDisabled}
+              empty={isEmpty}
               scoreId={awayScoreId}
               onDecrement={() => setAwayScore(awayScore - 1)}
               onIncrement={() => setAwayScore(awayScore + 1)}
@@ -373,30 +375,24 @@ export function MatchCard({
           ) : null}
 
           <div className="mt-3.5 flex items-center gap-2.5">
-            {state === "locked" || state === "live" ? (
+            {cardState === "locked" || cardState === "live" ? (
               <span className="inline-flex items-center gap-1.5 rounded-pill bg-card-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_0_0_1.5px_var(--border)]">
                 <span className="size-[7px] rounded-full bg-muted-foreground/50" />
-                {state === "live"
+                {cardState === "live"
                   ? "En juego — cerrado"
                   : "Este partido ya empezó"}
               </span>
-            ) : (
+            ) : cardState === "saved" ? (
+              // Constraint B: saved ≠ locked — the green pill is purely an
+              // indicator; the steppers above stay active.
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-primary-soft px-2.5 py-1.5 text-xs font-semibold text-primary-deep">
+                ✓ Guardado
+              </span>
+            ) : cardState === "dirty" ? (
               <span className="inline-flex items-center gap-1.5 rounded-pill bg-card-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_0_0_1.5px_var(--border)]">
                 <span className="size-[7px] rounded-full bg-warn" />
                 Sin guardar
               </span>
-            )}
-
-            {onSubmit && state === "open" ? (
-              <Button
-                type="button"
-                variant={celebration ? "pop-gol" : "pop"}
-                onClick={onSubmit}
-                disabled={controlsDisabled}
-                className="ml-auto h-auto px-5 py-2.5 text-[15px]"
-              >
-                {saving ? "Guardando..." : "Guardar"}
-              </Button>
             ) : null}
           </div>
         </>
