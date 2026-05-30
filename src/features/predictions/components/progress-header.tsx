@@ -25,18 +25,6 @@ export function ProgressHeader() {
 
   return (
     <div className="sticky top-0 z-30 border-b border-border/60 bg-background/86 px-[18px] py-3 backdrop-blur-md backdrop-saturate-150">
-      {/* Title row */}
-      <div className="mb-[11px] flex items-end justify-between gap-[10px]">
-        <div>
-          <p className="text-[11.5px] font-bold uppercase tracking-[.14em] text-muted-foreground">
-            Fase de grupos
-          </p>
-          <h1 className="font-display text-[25px] font-[750] leading-none tracking-tight">
-            Partidos
-          </h1>
-        </div>
-      </div>
-
       {/* Progress row: ring + meta */}
       <div className="flex items-center gap-[13px]">
         {/* Conic-gradient ring */}
