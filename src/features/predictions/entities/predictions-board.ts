@@ -23,8 +23,8 @@ export interface BoardMatch {
 }
 
 /**
- * Three visible card states visible to the user, plus frozen states for
- * matches that have already started or been confirmed.
+ * User-visible card states: three editable states (empty/dirty/saved) plus
+ * three frozen states for matches that have kicked off or been confirmed.
  */
 export type CardState =
   | "empty"
