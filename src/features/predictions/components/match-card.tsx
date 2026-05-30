@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
 import {
   type Match,
   ROUND_MULTIPLIERS,
@@ -19,6 +17,7 @@ import type {
 import { formatAR } from "@/shared/datetime";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { TeamFlag } from "@/shared/ui/team-flag";
 
 import { AdvancerPicker } from "./advancer-picker";
 import { ScoreControl } from "./score-control";
@@ -70,27 +69,6 @@ function mapErrorMessage(
 
 function normalizeScore(value: number) {
   return Math.max(0, Math.trunc(value));
-}
-
-function TeamFlag({ name, flagUrl }: { name: string; flagUrl: string | null }) {
-  if (flagUrl) {
-    return (
-      <Image
-        src={flagUrl}
-        alt={`Bandera de ${name}`}
-        width={30}
-        height={30}
-        className="size-[30px] shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-border"
-        unoptimized
-      />
-    );
-  }
-  return (
-    <div
-      aria-hidden="true"
-      className="size-[30px] shrink-0 rounded-full border border-dashed border-border bg-card-muted"
-    />
-  );
 }
 
 function TeamRow({

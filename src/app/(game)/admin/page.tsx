@@ -4,6 +4,7 @@ import { confirmResultAction } from "@/features/results";
 import { ConfirmResultForm } from "@/features/results";
 import { selectCorrectableMatches } from "@/features/results/actions/select-correctable-matches";
 import { createClient } from "@/shared/supabase/server";
+import { EmptyState } from "@/shared/ui/empty-state";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -34,9 +35,7 @@ export default async function AdminPage() {
       </header>
 
       {matches.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          No hay partidos para corregir todavía.
-        </div>
+        <EmptyState title="No hay partidos para corregir todavía." />
       ) : (
         <div className="grid gap-4">
           {matches.map((match) => (

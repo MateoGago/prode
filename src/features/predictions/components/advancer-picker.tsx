@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
-
 import type { Team } from "@/features/fixtures/entities/match";
 import { cn } from "@/shared/lib/utils";
+import { TeamFlag } from "@/shared/ui/team-flag";
 
 export type AdvancerPickerProps = {
   /** The two competing teams; only shown on a KO + predicted draw. */
@@ -45,16 +44,13 @@ export function AdvancerPicker({
                   "bg-primary-soft text-primary-deep shadow-[inset_0_0_0_2px_var(--primary)]",
               )}
             >
-              {team.flagUrl ? (
-                <Image
-                  src={team.flagUrl}
-                  alt=""
-                  width={22}
-                  height={22}
-                  className="size-[22px] shrink-0 rounded-full object-cover"
-                  unoptimized
-                />
-              ) : null}
+              <TeamFlag
+                name={team.name}
+                flagUrl={team.flagUrl}
+                size={22}
+                imageClassName="size-[22px] shrink-0 rounded-full object-cover"
+                placeholderClassName="size-[22px] shrink-0 rounded-full border border-dashed border-border"
+              />
               {team.name}
             </button>
           );

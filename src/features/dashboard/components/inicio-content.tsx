@@ -1,12 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 
 import type { LastResultRow } from "@/features/dashboard";
 import { Button } from "@/shared/ui/button";
+import { EmptyState } from "@/shared/ui/empty-state";
 import { KickoffCountdown } from "@/shared/ui/kickoff-countdown";
+import { TeamFlag } from "@/shared/ui/team-flag";
 import { useReveal } from "@/shared/motion";
 
 /** Plain, RSC-serializable shape for the próximo-partido hero. */
@@ -77,29 +78,6 @@ function StatCard({
   );
 }
 
-function Flag({ team, size }: { team: TeamView; size: number }) {
-  if (team.flagUrl) {
-    return (
-      <Image
-        src={team.flagUrl}
-        alt={`Bandera de ${team.name}`}
-        width={size}
-        height={size}
-        unoptimized
-        className="shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-white/15"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  return (
-    <div
-      aria-hidden="true"
-      className="shrink-0 rounded-full border border-dashed border-white/30"
-      style={{ width: size, height: size }}
-    />
-  );
-}
-
 const PILL_BY_KIND: Record<LastResultRow["kind"], string> = {
   win: "bg-primary-soft text-primary-deep",
   partial: "bg-warn-soft text-warn-deep",
@@ -148,14 +126,26 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
 
       <div className="relative my-4 flex items-center gap-3">
         <div className="flex flex-1 flex-col items-center gap-2">
-          <Flag team={next.home} size={40} />
+          <TeamFlag
+            name={next.home.name}
+            flagUrl={next.home.flagUrl}
+            size={40}
+            imageClassName="shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-white/15"
+            placeholderClassName="shrink-0 rounded-full border border-dashed border-white/30"
+          />
           <span className="text-sm font-bold">{next.home.name}</span>
         </div>
         <span className="font-heading text-[15px] font-bold text-white/60">
           VS
         </span>
         <div className="flex flex-1 flex-col items-center gap-2">
-          <Flag team={next.away} size={40} />
+          <TeamFlag
+            name={next.away.name}
+            flagUrl={next.away.flagUrl}
+            size={40}
+            imageClassName="shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-white/15"
+            placeholderClassName="shrink-0 rounded-full border border-dashed border-white/30"
+          />
           <span className="text-sm font-bold">{next.away.name}</span>
         </div>
       </div>
@@ -179,15 +169,11 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
 
 function NoNextMatch() {
   return (
-    <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center shadow-card">
-      <p className="font-heading text-lg font-bold">
-        No hay partidos abiertos ahora mismo
-      </p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Volvé más tarde: cuando se habilite la próxima fecha vas a poder cargar
-        tus pronósticos acá.
-      </p>
-    </div>
+    <EmptyState
+      title="No hay partidos abiertos ahora mismo"
+      description="Volvé más tarde: cuando se habilite la próxima fecha vas a poder cargar tus pronósticos acá."
+      className="rounded-2xl p-6"
+    />
   );
 }
 
@@ -297,15 +283,10 @@ export function InicioContent({
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border bg-card p-5 text-center shadow-card">
-              <p className="text-sm font-semibold">
-                Todavía no jugaste ninguna
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Cargá tus pronósticos y, cuando se confirmen los resultados, los
-                vas a ver acá con tus puntos.
-              </p>
-            </div>
+            <EmptyState
+              title="Todavía no jugaste ninguna"
+              description="Cargá tus pronósticos y, cuando se confirmen los resultados, los vas a ver acá con tus puntos."
+            />
           )}
         </motion.div>
       </div>
