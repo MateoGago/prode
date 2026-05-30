@@ -277,10 +277,13 @@ export function filterPredicate(
     }
 
     case "guardados": {
+      // A match is "guardado" if it has a saved prediction, regardless of lock
+      // status. A locked match that was saved before kickoff must still appear
+      // here — deriveCardState would return "locked" for it, not "saved", so we
+      // test saved-existence directly (same criterion as the "cargados X/72"
+      // counter — both = saved-map cardinality). PRODUCT DECISION, confirmed.
       const saved = savedMap[matchId] ?? null;
-      const working = workingMap[matchId];
-      const state = deriveCardState(saved, working, lock);
-      return state === "saved";
+      return saved !== null;
     }
   }
 }

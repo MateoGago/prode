@@ -511,7 +511,11 @@ describe("filterPredicate (REQ-05)", () => {
     ).toBe(true);
   });
 
-  it("guardados: excludes dirty match", () => {
+  it("guardados: includes a dirty match that has a saved prediction", () => {
+    // The user re-edited an already-saved match. The saved prediction still
+    // exists in savedMap (saved !== null), so the match stays in "guardados"
+    // even though the working value differs. PRODUCT DECISION: guardados =
+    // saved-existence, consistent with the "cargados X/72" counter.
     const workingMap: Record<string, PredictionInput> = {
       m1: { homeScore: 2, awayScore: 0, advancerTeamId: null },
     };
@@ -525,13 +529,37 @@ describe("filterPredicate (REQ-05)", () => {
         FUTURE_FAR,
         NOW,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("guardados: excludes empty (never loaded) match", () => {
     expect(
       filterPredicate("guardados", "m1", {}, {}, OPEN, FUTURE_FAR, NOW),
     ).toBe(false);
+  });
+
+  it("guardados: includes a locked match that has a saved prediction (PRODUCT DECISION)", () => {
+    // A match that kicked off but already had a saved prediction must appear in
+    // the "guardados" tab. The filter is based on saved-existence (saved !== null),
+    // not on deriveCardState, because deriveCardState returns "locked" for such
+    // matches — not "saved".
+    expect(
+      filterPredicate(
+        "guardados",
+        "m1",
+        { m1: savedPred },
+        {},
+        LOCKED,
+        PAST,
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("guardados: excludes a locked match with NO saved prediction", () => {
+    expect(filterPredicate("guardados", "m1", {}, {}, LOCKED, PAST, NOW)).toBe(
+      false,
+    );
   });
 });
 
