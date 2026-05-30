@@ -12,6 +12,13 @@ export default async function TablaPage() {
     rows,
   ] = await Promise.all([supabase.auth.getUser(), getLeaderboard()]);
 
+  // Precompute each player's href on the server — functions can't cross the
+  // RSC boundary into the client LeaderboardTable.
+  const rowsWithHref = rows.map((row) => ({
+    ...row,
+    href: `/tabla/${row.playerId}`,
+  }));
+
   return (
     <section className="grid gap-6">
       <div className="grid gap-1">
@@ -24,9 +31,8 @@ export default async function TablaPage() {
       </div>
 
       <LeaderboardTable
-        rows={rows}
+        rows={rowsWithHref}
         highlightPlayerId={user?.id}
-        getPlayerHref={(row) => `/tabla/${row.playerId}`}
         emptyMessage="Todavía no hay puntos cargados."
       />
     </section>

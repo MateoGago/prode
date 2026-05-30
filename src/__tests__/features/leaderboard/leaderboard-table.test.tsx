@@ -53,13 +53,13 @@ describe("LeaderboardTable", () => {
     ).toBeInTheDocument();
   });
 
-  it("with getPlayerHref, player name is a link with correct href", () => {
-    render(
-      <LeaderboardTable
-        rows={sampleRows}
-        getPlayerHref={(row) => `/tabla/${row.playerId}`}
-      />,
-    );
+  it("with row.href, player name is a link with correct href", () => {
+    const linkedRows: LeaderboardRow[] = sampleRows.map((row) => ({
+      ...row,
+      href: `/tabla/${row.playerId}`,
+    }));
+
+    render(<LeaderboardTable rows={linkedRows} />);
 
     const aliceLink = screen.getByRole("link", { name: "Alice" });
     expect(aliceLink).toHaveAttribute("href", "/tabla/u1");
@@ -68,7 +68,7 @@ describe("LeaderboardTable", () => {
     expect(bobLink).toHaveAttribute("href", "/tabla/u2");
   });
 
-  it("without getPlayerHref, renders player names as plain text (no links)", () => {
+  it("without row.href, renders player names as plain text (no links)", () => {
     render(<LeaderboardTable rows={sampleRows} />);
 
     const links = screen.queryAllByRole("link");
