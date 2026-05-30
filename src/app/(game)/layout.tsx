@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { AppSidebarNav, AppTabBar } from "@/features/auth/components/app-nav";
+import { getPredictionsProgress } from "@/features/predictions";
 import { createClient } from "@/shared/supabase/server";
 
 function Wordmark() {
@@ -60,6 +61,8 @@ export default async function GameLayout({
     "Jugador";
   const initials = initialsOf(displayName) || "JG";
 
+  const predictionsProgress = await getPredictionsProgress(user.id);
+
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
       {/* Desktop: persistent left sidebar. */}
@@ -67,7 +70,10 @@ export default async function GameLayout({
         <div className="px-2">
           <Wordmark />
         </div>
-        <AppSidebarNav isAdmin={isAdmin} />
+        <AppSidebarNav
+          isAdmin={isAdmin}
+          predictionsProgress={predictionsProgress}
+        />
         <div className="mt-auto grid gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2.5 px-1">
             <span
@@ -103,7 +109,7 @@ export default async function GameLayout({
         </main>
       </div>
 
-      <AppTabBar isAdmin={isAdmin} />
+      <AppTabBar isAdmin={isAdmin} predictionsProgress={predictionsProgress} />
     </div>
   );
 }

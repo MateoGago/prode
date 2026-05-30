@@ -1,4 +1,6 @@
 import { getLeaderboard, getMatchBreakdown } from "@/features/leaderboard";
+import { getPredictionsProgress } from "@/features/predictions";
+import type { PredictionProgress } from "@/features/predictions";
 import {
   mapMatchRow,
   type MatchWithTeamsRow,
@@ -21,6 +23,12 @@ export interface DashboardData {
   totalMatches: number;
   /** Confirmed predictions the player has scored — "jugados" numerator. */
   played: number;
+  /**
+   * Group-stage load progress ("X/72 cargadas") — the SAME number the app-nav
+   * badge shows, from the shared getPredictionsProgress helper. Distinct from
+   * `played` (scored) and `totalMatches` (all fixtures incl. knockout).
+   */
+  predictionsProgress: PredictionProgress;
   nextMatch: Match | null;
   pendingPredictions: number;
   lastResults: LastResultRow[];
@@ -37,12 +45,17 @@ export async function getDashboard(
   const supabase = await createClient();
 
   // Independent reads — run in parallel to avoid a request waterfall.
-  const [matchesResult, predictionsResult, leaderboard, breakdown] =
-    await Promise.all([
-      supabase
-        .from("matches")
-        .select(
-          `
+  const [
+    matchesResult,
+    predictionsResult,
+    leaderboard,
+    breakdown,
+    predictionsProgress,
+  ] = await Promise.all([
+    supabase
+      .from("matches")
+      .select(
+        `
           id, external_ref, round, multiplier, matchday,
           home_placeholder, away_placeholder, kickoff_at, status,
           home_score, away_score, result_confirmed_at,
@@ -53,12 +66,13 @@ export async function getDashboard(
             id, external_ref, name, group_label, flag_url
           )
         `,
-        )
-        .order("kickoff_at", { ascending: true }),
-      supabase.from("predictions").select("match_id").eq("user_id", userId),
-      getLeaderboard(),
-      getMatchBreakdown(userId),
-    ]);
+      )
+      .order("kickoff_at", { ascending: true }),
+    supabase.from("predictions").select("match_id").eq("user_id", userId),
+    getLeaderboard(),
+    getMatchBreakdown(userId),
+    getPredictionsProgress(userId),
+  ]);
 
   if (matchesResult.error) {
     throw new Error(`load matches failed: ${matchesResult.error.message}`);
@@ -82,6 +96,7 @@ export async function getDashboard(
     stats: derivePlayerStats(leaderboard, userId),
     totalMatches: matches.length,
     played: breakdown.length,
+    predictionsProgress,
     nextMatch: selectNextMatch(matches, now),
     pendingPredictions: countPendingPredictions(
       matches,

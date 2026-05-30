@@ -69,6 +69,15 @@ export interface Progress {
   cierranHoy: number;
 }
 
+/**
+ * Cross-app group-stage progress ("X/72 cargadas"): the single shape echoed
+ * outside /predicciones (app nav badge + Inicio dashboard). `loaded` ≤ `total`.
+ */
+export interface PredictionProgress {
+  loaded: number;
+  total: number;
+}
+
 /** Per-group progress chip data. */
 export interface GroupProgress {
   label: string;

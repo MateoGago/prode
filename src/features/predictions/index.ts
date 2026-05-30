@@ -1,6 +1,7 @@
 // predictions: save a user's prediction and enforce the pre-kickoff lock.
 // Pure rules + types live in entities/; the save action is the I/O shell.
 
+export { getPredictionsProgress } from "./actions/get-predictions-progress";
 export { saveBatchPredictions } from "./actions/save-batch-predictions";
 export { savePrediction } from "./actions/save-prediction";
 export { AdvancerPicker } from "./components/advancer-picker";
@@ -68,6 +69,7 @@ export type {
   LockInfo,
   LockableMatch,
   MatchStatus,
+  PredictionProgress,
   Progress,
   UpsertItem,
 } from "./entities/predictions-board";

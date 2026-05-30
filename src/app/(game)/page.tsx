@@ -66,6 +66,8 @@ export default async function HomePage() {
       points={dashboard.stats.points}
       played={dashboard.played}
       totalMatches={dashboard.totalMatches}
+      predictionsLoaded={dashboard.predictionsProgress.loaded}
+      predictionsTotal={dashboard.predictionsProgress.total}
       nextMatch={nextMatch}
       lastResults={dashboard.lastResults}
     />

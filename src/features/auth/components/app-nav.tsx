@@ -7,8 +7,16 @@ import { cn } from "@/shared/lib/utils";
 
 import { NAV_ITEMS, isNavItemActive } from "./app-nav-items";
 
+/** Group-stage progress echoed onto the "Partidos" nav item ("X/72"). */
+export type PredictionsProgress = {
+  loaded: number;
+  total: number;
+};
+
 type AppNavProps = {
   isAdmin: boolean;
+  /** Optional "X/72" badge fed from the shared getPredictionsProgress helper. */
+  predictionsProgress?: PredictionsProgress;
 };
 
 function visibleItems(isAdmin: boolean) {
@@ -16,10 +24,24 @@ function visibleItems(isAdmin: boolean) {
 }
 
 /**
+ * The badge is a "pending work" hint: shown only on /predicciones, only while
+ * there is something left to load. It disappears at 72/72 (all done) and when
+ * no progress prop is supplied — identifying the item by href, never index.
+ */
+function predictionsBadge(
+  href: string,
+  progress: PredictionsProgress | undefined,
+): string | null {
+  if (href !== "/predicciones" || !progress) return null;
+  if (progress.total === 0 || progress.loaded >= progress.total) return null;
+  return `${progress.loaded}/${progress.total}`;
+}
+
+/**
  * Mobile bottom tab bar — fixed, blurred, safe-area aware. Hidden from md up,
  * where the sidebar takes over.
  */
-export function AppTabBar({ isAdmin }: AppNavProps) {
+export function AppTabBar({ isAdmin, predictionsProgress }: AppNavProps) {
   const pathname = usePathname();
   const items = visibleItems(isAdmin);
 
@@ -31,6 +53,7 @@ export function AppTabBar({ isAdmin }: AppNavProps) {
     >
       {items.map(({ href, label, icon: Icon }) => {
         const active = isNavItemActive(pathname, href);
+        const badge = predictionsBadge(href, predictionsProgress);
         return (
           <Link
             key={href}
@@ -43,7 +66,7 @@ export function AppTabBar({ isAdmin }: AppNavProps) {
           >
             <span
               className={cn(
-                "rounded-pill px-3.5 py-1 transition-colors",
+                "relative rounded-pill px-3.5 py-1 transition-colors",
                 active && "bg-primary-soft",
               )}
             >
@@ -52,6 +75,11 @@ export function AppTabBar({ isAdmin }: AppNavProps) {
                 aria-hidden="true"
                 strokeWidth={2.2}
               />
+              {badge ? (
+                <span className="-right-1 -top-1 absolute rounded-pill bg-primary px-1.5 py-0.5 font-bold text-[0.6rem] text-primary-foreground tabular-nums leading-none">
+                  {badge}
+                </span>
+              ) : null}
             </span>
             {label}
           </Link>
@@ -65,7 +93,7 @@ export function AppTabBar({ isAdmin }: AppNavProps) {
  * Desktop left sidebar — the same items as the tab bar, stacked vertically with
  * the active-pill pattern. Hidden below md.
  */
-export function AppSidebarNav({ isAdmin }: AppNavProps) {
+export function AppSidebarNav({ isAdmin, predictionsProgress }: AppNavProps) {
   const pathname = usePathname();
   const items = visibleItems(isAdmin);
 
@@ -73,6 +101,7 @@ export function AppSidebarNav({ isAdmin }: AppNavProps) {
     <nav aria-label="Navegación principal" className="grid gap-1">
       {items.map(({ href, label, icon: Icon }) => {
         const active = isNavItemActive(pathname, href);
+        const badge = predictionsBadge(href, predictionsProgress);
         return (
           <Link
             key={href}
@@ -87,6 +116,11 @@ export function AppSidebarNav({ isAdmin }: AppNavProps) {
           >
             <Icon className="size-5" aria-hidden="true" strokeWidth={2.2} />
             {label}
+            {badge ? (
+              <span className="ml-auto rounded-pill bg-primary px-1.5 py-0.5 font-bold text-[0.7rem] text-primary-foreground tabular-nums leading-none">
+                {badge}
+              </span>
+            ) : null}
           </Link>
         );
       })}
