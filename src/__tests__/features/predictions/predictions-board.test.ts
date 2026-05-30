@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveCardState,
+  deriveGroupProgress,
+  deriveLock,
   deriveProgress,
   dirtySet,
   filterPredicate,
@@ -530,5 +532,111 @@ describe("filterPredicate (REQ-05)", () => {
     expect(
       filterPredicate("guardados", "m1", {}, {}, OPEN, FUTURE_FAR, NOW),
     ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-06: deriveGroupProgress
+// ---------------------------------------------------------------------------
+
+describe("deriveGroupProgress (REQ-06)", () => {
+  const GROUP_A = {
+    groupLabel: "A",
+    matchIds: ["m1", "m2", "m3", "m4", "m5", "m6"],
+  };
+
+  it("empty: 0/6 when no saved predictions in group", () => {
+    const result = deriveGroupProgress(GROUP_A, {});
+    expect(result.loaded).toBe(0);
+    expect(result.total).toBe(6);
+    expect(result.status).toBe("empty");
+    expect(result.label).toBe("A");
+  });
+
+  it("partial: 4/6 when 4 matches in group are saved (REQ-06 scenario)", () => {
+    const savedMap = { m1: {}, m2: {}, m3: {}, m4: {} };
+    const result = deriveGroupProgress(GROUP_A, savedMap);
+    expect(result.loaded).toBe(4);
+    expect(result.total).toBe(6);
+    expect(result.status).toBe("partial");
+  });
+
+  it("done: 6/6 when all matches are saved", () => {
+    const savedMap = {
+      m1: {},
+      m2: {},
+      m3: {},
+      m4: {},
+      m5: {},
+      m6: {},
+    };
+    const result = deriveGroupProgress(GROUP_A, savedMap);
+    expect(result.loaded).toBe(6);
+    expect(result.status).toBe("done");
+  });
+
+  it("partial: 1/6 is partial, not empty", () => {
+    const result = deriveGroupProgress(GROUP_A, { m1: {} });
+    expect(result.status).toBe("partial");
+  });
+
+  it("only counts matches that belong to this group (keys in savedMap that are not in group are ignored)", () => {
+    // m7 and m8 belong to a different group — should not inflate loaded count
+    const savedMap = { m1: {}, m7: {}, m8: {} };
+    const result = deriveGroupProgress(GROUP_A, savedMap);
+    expect(result.loaded).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-07: deriveLock
+// ---------------------------------------------------------------------------
+
+describe("deriveLock (REQ-07)", () => {
+  const KICKOFF = new Date("2026-06-15T18:00:00.000Z");
+  const BEFORE = new Date("2026-06-15T17:59:59.000Z");
+  const AT_KICKOFF = new Date("2026-06-15T18:00:00.000Z");
+  const AFTER = new Date("2026-06-15T18:00:01.000Z");
+
+  it("editable when client clock is before kickoff (scheduled)", () => {
+    const lock = deriveLock(
+      { kickoffAt: KICKOFF, status: "scheduled" },
+      BEFORE,
+    );
+    expect(lock.editable).toBe(true);
+    expect(lock.reason).toBeUndefined();
+  });
+
+  it("locked at kickoff (now >= kickoff_at, client hint)", () => {
+    const lock = deriveLock(
+      { kickoffAt: KICKOFF, status: "scheduled" },
+      AT_KICKOFF,
+    );
+    expect(lock.editable).toBe(false);
+    expect(lock.reason).toBe("kickoff");
+  });
+
+  it("locked after kickoff", () => {
+    const lock = deriveLock({ kickoffAt: KICKOFF, status: "scheduled" }, AFTER);
+    expect(lock.editable).toBe(false);
+    expect(lock.reason).toBe("kickoff");
+  });
+
+  it("live match is locked with reason=live", () => {
+    const lock = deriveLock({ kickoffAt: KICKOFF, status: "live" }, AFTER);
+    expect(lock.editable).toBe(false);
+    expect(lock.reason).toBe("live");
+  });
+
+  it("finished match is locked with reason=live", () => {
+    const lock = deriveLock({ kickoffAt: KICKOFF, status: "finished" }, AFTER);
+    expect(lock.editable).toBe(false);
+    expect(lock.reason).toBe("live");
+  });
+
+  it("confirmed match is locked with reason=confirmed", () => {
+    const lock = deriveLock({ kickoffAt: KICKOFF, status: "confirmed" }, AFTER);
+    expect(lock.editable).toBe(false);
+    expect(lock.reason).toBe("confirmed");
   });
 });
