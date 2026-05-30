@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -16,6 +17,44 @@ vi.mock("next/link", () => ({
     children: React.ReactNode;
   }) => <a href={href}>{children}</a>,
 }));
+
+// motion/react: collapse all variants so rendered markup is deterministic.
+vi.mock("motion/react", () => {
+  const makeEl =
+    (Tag: string) =>
+    ({
+      children,
+      className,
+      "aria-current": ariaCurrent,
+      "aria-label": ariaLabel,
+      role,
+      ...rest
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+      "aria-current"?: string;
+      "aria-label"?: string;
+      role?: string;
+      [key: string]: unknown;
+    }) => {
+      const props: Record<string, unknown> = { className };
+      if (ariaCurrent !== undefined) props["aria-current"] = ariaCurrent;
+      if (ariaLabel !== undefined) props["aria-label"] = ariaLabel;
+      if (role !== undefined) props.role = role;
+      if (typeof rest["data-testid"] === "string")
+        props["data-testid"] = rest["data-testid"];
+      return React.createElement(Tag, props, children);
+    };
+
+  return {
+    motion: {
+      div: makeEl("div"),
+      tr: makeEl("tr"),
+      tbody: makeEl("tbody"),
+    },
+    useReducedMotion: () => false,
+  };
+});
 
 const sampleRows: LeaderboardRow[] = [
   { playerId: "u1", playerName: "Alice", totalPoints: 30 },
@@ -53,50 +92,65 @@ describe("LeaderboardTable", () => {
     ).toBeInTheDocument();
   });
 
-  it("with row.href, player name is a link with correct href", () => {
-    const linkedRows: LeaderboardRow[] = sampleRows.map((row) => ({
-      ...row,
-      href: `/tabla/${row.playerId}`,
-    }));
+  it("with row.href, player name (rank 4+) is a link with correct href", () => {
+    // With podium showing top-3, rank 4+ appear in the table list with links
+    const fourRows: LeaderboardRow[] = [
+      ...sampleRows,
+      {
+        playerId: "u4",
+        playerName: "Diana",
+        totalPoints: 5,
+        href: "/tabla/u4",
+      },
+    ];
 
-    render(<LeaderboardTable rows={linkedRows} />);
+    render(<LeaderboardTable rows={fourRows} />);
 
-    const aliceLink = screen.getByRole("link", { name: "Alice" });
-    expect(aliceLink).toHaveAttribute("href", "/tabla/u1");
-
-    const bobLink = screen.getByRole("link", { name: "Bob" });
-    expect(bobLink).toHaveAttribute("href", "/tabla/u2");
+    const dianaLink = screen.getByRole("link", { name: "Diana" });
+    expect(dianaLink).toHaveAttribute("href", "/tabla/u4");
   });
 
-  it("without row.href, renders player names as plain text (no links)", () => {
-    render(<LeaderboardTable rows={sampleRows} />);
+  it("without row.href, rank 4+ player renders as plain text (no links)", () => {
+    const fourRows: LeaderboardRow[] = [
+      ...sampleRows,
+      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
+    ];
+    render(<LeaderboardTable rows={fourRows} />);
 
-    const links = screen.queryAllByRole("link");
-    expect(links).toHaveLength(0);
-
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    // Diana (rank 4, no href) should not be a link
+    expect(screen.queryByRole("link", { name: "Diana" })).toBeNull();
+    expect(screen.getByText("Diana")).toBeInTheDocument();
   });
 
-  it("highlightPlayerId marks the matching row with aria-current", () => {
-    render(<LeaderboardTable rows={sampleRows} highlightPlayerId="u2" />);
+  it("highlightPlayerId marks a rank-4+ row with aria-current", () => {
+    // Bob is rank 2 (in podium); Diana is rank 4 (in list below podium)
+    const fourRows: LeaderboardRow[] = [
+      ...sampleRows,
+      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
+    ];
+    render(<LeaderboardTable rows={fourRows} highlightPlayerId="u4" />);
 
-    // Find the row containing "Bob" — it should be highlighted
-    const bobCell = screen.getByText("Bob");
-    const row = bobCell.closest("tr");
+    const dianaCell = screen.getByText("Diana");
+    const row = dianaCell.closest("tr");
     expect(row).toHaveAttribute("aria-current", "true");
 
-    // Other rows must NOT have aria-current
-    const aliceCell = screen.getByText("Alice");
-    const aliceRow = aliceCell.closest("tr");
-    expect(aliceRow).not.toHaveAttribute("aria-current");
+    // Charlie is rank 3 — lives in the podium (not a <tr>), so no aria-current row
+    const charlieCell = screen.getByText("Charlie");
+    expect(charlieCell.closest("tr")).toBeNull();
   });
 
-  it("highlighted row has bg-primary/10 class", () => {
-    render(<LeaderboardTable rows={sampleRows} highlightPlayerId="u1" />);
+  it("highlighted row (rank 4+) has ring-primary class (own-row highlight)", () => {
+    // Alice is rank 1 (in podium), Diana is rank 4 (in the list table)
+    const moreRows: LeaderboardRow[] = [
+      ...sampleRows,
+      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
+    ];
+    render(<LeaderboardTable rows={moreRows} highlightPlayerId="u4" />);
 
-    const aliceCell = screen.getByText("Alice");
-    const row = aliceCell.closest("tr");
-    expect(row?.className).toContain("bg-primary/10");
+    const dianaCell = screen.getByText("Diana");
+    const row = dianaCell.closest("tr");
+    // The redesigned row uses ring-2 ring-primary for own-row highlight
+    expect(row?.className).toMatch(/ring-primary/);
   });
 
   it("shared rank on ties: two players with same points share the same Puesto (LB-1)", () => {
@@ -114,5 +168,81 @@ describe("LeaderboardTable", () => {
 
     // The last player should be rank 3 (not 2) due to shared rank
     expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  // ── D-7: Cancha Pop podium + reveal ─────────────────────────────────────────
+
+  it("renders a podium section for top-3 rows", () => {
+    render(<LeaderboardTable rows={sampleRows} />);
+
+    // Podium region is labelled
+    expect(screen.getByRole("region", { name: /podio/i })).toBeInTheDocument();
+  });
+
+  it("podium shows names for rank 1, 2, and 3", () => {
+    render(<LeaderboardTable rows={sampleRows} />);
+
+    const podium = screen.getByRole("region", { name: /podio/i });
+    expect(podium).toHaveTextContent("Alice");
+    expect(podium).toHaveTextContent("Bob");
+    expect(podium).toHaveTextContent("Charlie");
+  });
+
+  it("podium uses crown emoji for rank-1 player", () => {
+    render(<LeaderboardTable rows={sampleRows} />);
+
+    const podium = screen.getByRole("region", { name: /podio/i });
+    expect(podium).toHaveTextContent("👑");
+  });
+
+  it("table rows below the podium still show position badges", () => {
+    // With more than 3 players, ranks 4+ appear in the table list
+    const moreRows: LeaderboardRow[] = [
+      ...sampleRows,
+      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
+    ];
+    render(<LeaderboardTable rows={moreRows} />);
+
+    // Diana is rank 4, should appear in the list (not podium)
+    const dianaCell = screen.getByText("Diana");
+    expect(dianaCell).toBeInTheDocument();
+
+    // Position badge "4" should exist somewhere
+    expect(screen.getByTestId("position-badge-u4")).toHaveTextContent("4");
+  });
+
+  it("podium is not rendered when fewer than 3 rows", () => {
+    const twoRows: LeaderboardRow[] = [
+      { playerId: "u1", playerName: "Alice", totalPoints: 30 },
+      { playerId: "u2", playerName: "Bob", totalPoints: 20 },
+    ];
+    render(<LeaderboardTable rows={twoRows} />);
+
+    // No podium region — falls back to full table view
+    expect(
+      screen.queryByRole("region", { name: /podio/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("own-row in list below podium gets aria-current and ring highlight", () => {
+    const moreRows: LeaderboardRow[] = [
+      ...sampleRows,
+      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
+    ];
+    render(<LeaderboardTable rows={moreRows} highlightPlayerId="u4" />);
+
+    const dianaCell = screen.getByText("Diana");
+    const row = dianaCell.closest("tr");
+    expect(row).toHaveAttribute("aria-current", "true");
+    expect(row?.className).toMatch(/ring-primary/);
+  });
+
+  it("renders EmptyState with no-posiciones text when rows is empty", () => {
+    render(<LeaderboardTable rows={[]} />);
+
+    // EmptyState renders a <p> with the title
+    expect(
+      screen.getByText("No hay posiciones para mostrar."),
+    ).toBeInTheDocument();
   });
 });
