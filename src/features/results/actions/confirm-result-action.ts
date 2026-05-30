@@ -18,8 +18,6 @@ import {
 } from "../entities/confirm-result";
 import { confirmResult } from "./confirm-result";
 
-export type { ConfirmActionResult };
-
 export async function confirmResultAction(
   input: ResultInput,
 ): Promise<ConfirmActionResult> {

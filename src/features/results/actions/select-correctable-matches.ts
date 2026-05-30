@@ -8,17 +8,8 @@
  */
 
 import type { Round } from "@/features/fixtures/entities/match";
-import type { ConfirmResultTeamOption } from "../components/confirm-result-form";
 import { createClient } from "@/shared/supabase/server";
-
-export interface CorrectableMatch {
-  matchId: string;
-  round: Round;
-  homeTeam: ConfirmResultTeamOption | null;
-  awayTeam: ConfirmResultTeamOption | null;
-  homeScore: number | null;
-  awayScore: number | null;
-}
+import type { CorrectableMatch } from "../entities/correctable-match";
 
 interface CorrectableMatchRow {
   id: string;
