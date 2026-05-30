@@ -35,6 +35,16 @@ describe("Button 3D tactile variants", () => {
     expect(button).toHaveClass("rounded-pill");
   });
 
+  it("renders a pop-danger variant with destructive bg, white text, and 3d shadow", () => {
+    render(<Button variant="pop-danger">Salir</Button>);
+    const button = screen.getByRole("button", { name: "Salir" });
+    expect(button).toHaveClass("bg-destructive");
+    expect(button).toHaveClass("text-white");
+    expect(button).toHaveClass("shadow-3d-danger");
+    expect(button).toHaveClass("rounded-pill");
+    expect(button).toHaveClass("active:not-aria-[haspopup]:translate-y-[5px]");
+  });
+
   it("fires onClick when a pop button is pressed", async () => {
     const onClick = vi.fn();
     const user = userEvent.setup();

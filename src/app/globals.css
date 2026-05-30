@@ -72,6 +72,8 @@
   --shadow-pop: var(--shadow-pop);
   --shadow-3d: var(--shadow-3d);
   --shadow-3d-press: var(--shadow-3d-press);
+  --shadow-3d-danger: var(--shadow-3d-danger);
+  --shadow-3d-danger-press: var(--shadow-3d-danger-press);
 
   --animate-rise: rise 0.55s var(--ease-bounce) forwards;
   --animate-pop-in: pop-in 0.45s var(--ease-bounce) forwards;
@@ -152,6 +154,11 @@
     0 5px 0 var(--primary-deep), 0 10px 18px -8px oklch(0.5 0.155 151 / 0.7);
   --shadow-3d-press:
     0 0 0 var(--primary-deep), 0 4px 10px -6px oklch(0.5 0.155 151 / 0.6);
+  /* Red 3D edge for the destructive pop variant (logout). */
+  --shadow-3d-danger:
+    0 5px 0 oklch(0.46 0.19 25), 0 10px 18px -8px oklch(0.5 0.2 25 / 0.7);
+  --shadow-3d-danger-press:
+    0 0 0 oklch(0.46 0.19 25), 0 4px 10px -6px oklch(0.5 0.2 25 / 0.6);
 
   --sidebar: oklch(0.985 0.008 150);
   --sidebar-foreground: oklch(0.235 0.035 165);

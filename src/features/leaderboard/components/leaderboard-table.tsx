@@ -176,8 +176,13 @@ function TableRow({
       key={row.playerId}
       variants={rise}
       className={[
-        "border-b last:border-0 transition-colors",
-        isHighlighted ? "ring-2 ring-primary bg-primary/10" : "",
+        "transition-colors",
+        isHighlighted
+          ? // Continuous rounded ring: each cell draws only its outer edges
+            // (first=top/bottom/left, middle=top/bottom, last=top/bottom/right)
+            // so there are no internal vertical dividers between the columns.
+            "ring-primary bg-primary/10 [&>td:first-child]:rounded-l-xl [&>td:last-child]:rounded-r-xl [&>td:first-child]:shadow-[inset_0_2px_0_var(--color-primary),inset_0_-2px_0_var(--color-primary),inset_2px_0_0_var(--color-primary)] [&>td:nth-child(2)]:shadow-[inset_0_2px_0_var(--color-primary),inset_0_-2px_0_var(--color-primary)] [&>td:last-child]:shadow-[inset_0_2px_0_var(--color-primary),inset_0_-2px_0_var(--color-primary),inset_-2px_0_0_var(--color-primary)]"
+          : "[&>td]:border-b [&>td:last-child]:border-0",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -264,16 +269,28 @@ export function LeaderboardTable({
 
         {listRows.length > 0 && (
           <div className="mt-3">
-            <table className="w-full text-sm" aria-label={ariaLabel}>
+            <table
+              className="w-full border-separate border-spacing-y-1 text-sm"
+              aria-label={ariaLabel}
+            >
               <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th scope="col" className="px-3 py-2 font-medium">
+                <tr className="text-left text-muted-foreground">
+                  <th
+                    scope="col"
+                    className="px-3 py-2 font-medium border-b border-border"
+                  >
                     Puesto
                   </th>
-                  <th scope="col" className="px-3 py-2 font-medium">
+                  <th
+                    scope="col"
+                    className="px-3 py-2 font-medium border-b border-border"
+                  >
                     Jugador
                   </th>
-                  <th scope="col" className="px-3 py-2 text-right font-medium">
+                  <th
+                    scope="col"
+                    className="px-3 py-2 text-right font-medium border-b border-border"
+                  >
                     Puntos
                   </th>
                 </tr>

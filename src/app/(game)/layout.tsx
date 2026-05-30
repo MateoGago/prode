@@ -49,14 +49,14 @@ export default async function GameLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, display_name")
     .eq("id", user.id)
     .maybeSingle();
   const isAdmin = profile?.role === "admin";
 
   const displayName =
+    (profile?.display_name as string | undefined) ??
     (user.user_metadata?.display_name as string | undefined) ??
-    user.email ??
     "Jugador";
   const initials = initialsOf(displayName) || "JG";
 

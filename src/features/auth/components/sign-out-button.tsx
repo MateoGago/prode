@@ -13,7 +13,7 @@ export function SignOutButton() {
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="pop-danger"
       size="sm"
       disabled={isPending}
       onClick={() => startTransition(() => signOut())}

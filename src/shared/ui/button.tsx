@@ -27,6 +27,8 @@ const buttonVariants = cva(
           "rounded-pill bg-gol text-primary-foreground shadow-3d transition-[transform,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] active:not-aria-[haspopup]:translate-y-[5px] active:shadow-3d-press hover:brightness-105 disabled:grayscale disabled:shadow-none",
         "pop-ghost":
           "rounded-pill border-border bg-background text-foreground ring-1 ring-inset ring-border shadow-[0_4px_0_var(--border)] transition-[transform,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] active:not-aria-[haspopup]:translate-y-[4px] active:shadow-none hover:bg-muted disabled:grayscale disabled:shadow-none",
+        "pop-danger":
+          "rounded-pill bg-destructive text-white shadow-3d-danger transition-[transform,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] active:not-aria-[haspopup]:translate-y-[5px] active:shadow-3d-danger-press hover:brightness-105 disabled:grayscale disabled:shadow-none",
       },
       size: {
         default:
