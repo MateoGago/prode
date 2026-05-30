@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   deriveCardState,
   deriveProgress,
+  dirtySet,
+  isDirty,
 } from "@/features/predictions/entities/predictions-board";
 import type { LockInfo } from "@/features/predictions/entities/predictions-board";
 import type { PredictionInput } from "@/features/predictions/entities/prediction";
@@ -176,5 +178,108 @@ describe("deriveCardState (REQ-02 + REQ-03)", () => {
 
   it("confirmed match → confirmed state", () => {
     expect(deriveCardState(saved, sameAsaved, CONFIRMED)).toBe("confirmed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-07 / dirty helpers: isDirty + dirtySet
+// ---------------------------------------------------------------------------
+
+describe("isDirty (REQ-07)", () => {
+  const base: PredictionInput = {
+    homeScore: 1,
+    awayScore: 0,
+    advancerTeamId: null,
+  };
+
+  it("false when working is undefined (untouched)", () => {
+    expect(isDirty(base, undefined)).toBe(false);
+    expect(isDirty(null, undefined)).toBe(false);
+  });
+
+  it("false when working deep-equals saved", () => {
+    const same: PredictionInput = {
+      homeScore: 1,
+      awayScore: 0,
+      advancerTeamId: null,
+    };
+    expect(isDirty(base, same)).toBe(false);
+  });
+
+  it("true when working differs from saved (home score changed)", () => {
+    const changed: PredictionInput = {
+      homeScore: 2,
+      awayScore: 0,
+      advancerTeamId: null,
+    };
+    expect(isDirty(base, changed)).toBe(true);
+  });
+
+  it("true when working differs from saved (away score changed)", () => {
+    const changed: PredictionInput = {
+      homeScore: 1,
+      awayScore: 1,
+      advancerTeamId: null,
+    };
+    expect(isDirty(base, changed)).toBe(true);
+  });
+
+  it("true when working differs from saved (advancerTeamId changed)", () => {
+    const withAdvancer: PredictionInput = {
+      homeScore: 1,
+      awayScore: 1,
+      advancerTeamId: "team-a",
+    };
+    const diffAdvancer: PredictionInput = {
+      homeScore: 1,
+      awayScore: 1,
+      advancerTeamId: "team-b",
+    };
+    expect(isDirty(withAdvancer, diffAdvancer)).toBe(true);
+  });
+
+  it("true when saved is null but working is defined", () => {
+    expect(
+      isDirty(null, { homeScore: 0, awayScore: 0, advancerTeamId: null }),
+    ).toBe(true);
+  });
+});
+
+describe("dirtySet (REQ-07)", () => {
+  it("returns empty set when no working entries", () => {
+    const savedMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+    };
+    expect(dirtySet(savedMap, {})).toEqual(new Set());
+  });
+
+  it("returns matchId when working differs from saved", () => {
+    const savedMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+    };
+    const workingMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 2, awayScore: 0, advancerTeamId: null },
+    };
+    expect(dirtySet(savedMap, workingMap)).toEqual(new Set(["m1"]));
+  });
+
+  it("does not include matchId when working equals saved", () => {
+    const pred: PredictionInput = {
+      homeScore: 1,
+      awayScore: 0,
+      advancerTeamId: null,
+    };
+    const savedMap: Record<string, PredictionInput> = { m1: pred };
+    const workingMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+    };
+    expect(dirtySet(savedMap, workingMap)).toEqual(new Set());
+  });
+
+  it("includes unsaved match with a working value (saved not in savedMap)", () => {
+    const workingMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 0, awayScore: 0, advancerTeamId: null },
+    };
+    expect(dirtySet({}, workingMap)).toEqual(new Set(["m1"]));
   });
 });
