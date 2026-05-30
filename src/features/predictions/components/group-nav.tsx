@@ -17,7 +17,7 @@ export function GroupNav() {
 
   return (
     <nav
-      className="flex gap-[7px] overflow-x-auto px-[18px] pb-[6px] pt-[8px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex gap-[7px] overflow-x-auto pb-[6px] pt-[8px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       aria-label="Navegación por grupos"
     >
       {groupProgress.map((gp) => (

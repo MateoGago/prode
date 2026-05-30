@@ -24,7 +24,7 @@ export function ProgressHeader() {
   const pct = total > 0 ? Math.round((cargados / total) * 100) : 0;
 
   return (
-    <div className="sticky top-0 z-30 border-b border-border/60 bg-background/86 px-[18px] py-3 backdrop-blur-md backdrop-saturate-150">
+    <div className="sticky top-0 z-30 border-b border-border/60 bg-background/86 py-3 backdrop-blur-md backdrop-saturate-150">
       {/* Progress row: ring + meta */}
       <div className="flex items-center gap-[13px]">
         {/* Conic-gradient ring */}
@@ -67,8 +67,9 @@ export function ProgressHeader() {
         aria-label={`Progreso: ${pct}% cargado`}
         className="mt-[11px] h-2 overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_2px_oklch(0.24_0.03_165/0.08)]"
       >
+        {/* Snappier feedback once data arrives; no optimistic flip (design §2). */}
         <div
-          className="h-full rounded-full bg-gradient-to-r from-primary to-[oklch(0.70_0.17_156)] transition-[width] duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-primary to-[oklch(0.70_0.17_156)] transition-[width] duration-200"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -86,8 +87,9 @@ interface ProgressRingProps {
 
 function ProgressRing({ pct }: ProgressRingProps) {
   return (
+    // Snappier feedback once data arrives; no optimistic flip (design §2).
     <div
-      className="relative grid h-[52px] w-[52px] flex-none place-items-center rounded-full transition-[background] duration-500"
+      className="relative grid h-[52px] w-[52px] flex-none place-items-center rounded-full transition-[background] duration-150"
       style={{
         background: `conic-gradient(var(--color-primary) ${pct}%, var(--color-muted) 0)`,
       }}

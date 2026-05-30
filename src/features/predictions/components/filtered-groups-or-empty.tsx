@@ -37,7 +37,7 @@ export function FilteredGroupsOrEmpty({
 
   if (count === 0) {
     return (
-      <div className="px-[18px] pt-4">
+      <div className="pt-4">
         <EmptyState title={EMPTY_MESSAGES[filter]} />
       </div>
     );
