@@ -96,6 +96,12 @@ export interface PredictionsProviderProps {
   /** Grouped matches (used for progress + group-chip derivations). */
   groups: GroupBlock[];
   children: ReactNode;
+  /**
+   * Optional fixed clock for deterministic rendering in tests.
+   * Production callers omit this prop — the provider defaults to new Date()
+   * at the call boundary (inside the render, not at import time).
+   */
+  now?: Date;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +112,7 @@ export function PredictionsProvider({
   initialPredictions,
   groups,
   children,
+  now = new Date(),
 }: PredictionsProviderProps) {
   // _setSavedMap: promoted to a real setter in Slice 4 when batch results arrive
   const [savedMap, _setSavedMap] =
@@ -146,8 +153,8 @@ export function PredictionsProvider({
   );
 
   const progress = useMemo(
-    () => deriveProgress(allMatches, savedMap, new Date()),
-    [allMatches, savedMap],
+    () => deriveProgress(allMatches, savedMap, now),
+    [allMatches, savedMap, now],
   );
 
   const groupProgress = useMemo(
@@ -178,7 +185,7 @@ export function PredictionsProvider({
         break;
       }
     }
-    return deriveLock({ kickoffAt, status }, new Date());
+    return deriveLock({ kickoffAt, status }, now);
   }
 
   function getCardState(matchId: string, kickoffAt: Date): CardState {
@@ -189,8 +196,7 @@ export function PredictionsProvider({
   }
 
   function getBatch(): UpsertItem[] {
-    // Build lock set from current client time
-    const now = new Date();
+    // Build lock set using the injected clock (now prop, defaults to new Date())
     const lockSet = new Set<string>();
     for (const group of groups) {
       for (const match of group.matches) {
