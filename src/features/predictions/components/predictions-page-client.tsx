@@ -9,6 +9,9 @@ import type {
 } from "@/features/predictions/entities/prediction";
 import type { GroupBlock } from "@/features/predictions/entities/predictions-page";
 
+import { FilterSegment } from "./filter-segment";
+import { FilteredGroupsOrEmpty } from "./filtered-groups-or-empty";
+import { GroupNav } from "./group-nav";
 import { GroupSection } from "./group-section";
 import { PredictionsProvider } from "./predictions-provider";
 import { ProgressHeader } from "./progress-header";
@@ -154,30 +157,36 @@ export function PredictionsPageClient({
     >
       <ProgressHeader />
 
-      <div className="grid gap-8 px-[18px] pt-4">
-        {generalError ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          >
-            {generalError}
-          </p>
-        ) : null}
+      {/* Group nav chips + segmented filter — Slice 3 */}
+      <GroupNav />
+      <FilterSegment />
 
-        {groups.map((group) => (
-          <GroupSection
-            key={group.groupLabel}
-            groupLabel={group.groupLabel}
-            matches={group.matches}
-            predictionsByMatchId={predictionsByMatchId}
-            lockedMatchIds={lockedMatchIds}
-            errorsByMatchId={errorsByMatchId}
-            savingMatchIds={savingMatchIds}
-            onMatchChange={onMatchChange}
-            onMatchSubmit={onMatchSubmit}
-          />
-        ))}
-      </div>
+      <FilteredGroupsOrEmpty>
+        <div className="grid gap-8 px-[18px] pt-4">
+          {generalError ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {generalError}
+            </p>
+          ) : null}
+
+          {groups.map((group) => (
+            <GroupSection
+              key={group.groupLabel}
+              groupLabel={group.groupLabel}
+              matches={group.matches}
+              predictionsByMatchId={predictionsByMatchId}
+              lockedMatchIds={lockedMatchIds}
+              errorsByMatchId={errorsByMatchId}
+              savingMatchIds={savingMatchIds}
+              onMatchChange={onMatchChange}
+              onMatchSubmit={onMatchSubmit}
+            />
+          ))}
+        </div>
+      </FilteredGroupsOrEmpty>
     </PredictionsProvider>
   );
 }

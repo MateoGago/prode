@@ -3,6 +3,8 @@
 
 export { savePrediction } from "./actions/save-prediction";
 export { AdvancerPicker } from "./components/advancer-picker";
+export { FilterSegment } from "./components/filter-segment";
+export { GroupNav } from "./components/group-nav";
 export { MatchCard } from "./components/match-card";
 export { GroupSection } from "./components/group-section";
 export { PredictionsPageClient } from "./components/predictions-page-client";
