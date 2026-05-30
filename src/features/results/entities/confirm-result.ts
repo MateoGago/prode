@@ -47,6 +47,15 @@ export type ResultValidation =
   | { ok: false; reason: ResultError };
 
 /**
+ * Discriminated result of the confirm Server Action. Lives in the entity (pure)
+ * so presentational components can type their onSubmit prop without importing
+ * the "use server" action module and its Supabase graph.
+ */
+export type ConfirmActionResult =
+  | { ok: true; recomputed: number }
+  | { ok: false; reason: "forbidden" | "match_not_found" | ResultError };
+
+/**
  * Server-side validation of an admin-entered final score — the form is cosmetic
  * (REQ-XCUT-5). Unlike predictions, a knockout draw MUST record the ET/penalty
  * winner (REQ-RES-3), a knockout non-draw may omit it, and a group match has none.

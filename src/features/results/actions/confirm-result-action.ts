@@ -12,15 +12,13 @@ import type { Round } from "@/features/fixtures/entities/match";
 import { createAdminClient } from "@/shared/supabase/admin";
 import { createClient } from "@/shared/supabase/server";
 import {
-  type ResultError,
+  type ConfirmActionResult,
   type ResultInput,
   validateResultInput,
 } from "../entities/confirm-result";
 import { confirmResult } from "./confirm-result";
 
-export type ConfirmActionResult =
-  | { ok: true; recomputed: number }
-  | { ok: false; reason: "forbidden" | "match_not_found" | ResultError };
+export type { ConfirmActionResult };
 
 export async function confirmResultAction(
   input: ResultInput,

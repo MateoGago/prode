@@ -3,6 +3,19 @@
 
 export { autoConfirmFinished } from "./actions/auto-confirm";
 export {
+  ConfirmResultForm,
+  type ConfirmResultFormProps,
+  type ConfirmResultTeamOption,
+} from "./components/confirm-result-form";
+export {
+  type ConfirmResultFormValues,
+  confirmResultFormSchema,
+} from "./entities/confirm-result-form-schema";
+export {
+  type CorrectableMatch,
+  selectCorrectableMatches,
+} from "./actions/select-correctable-matches";
+export {
   type ConfirmResultOutcome,
   confirmResult,
 } from "./actions/confirm-result";
