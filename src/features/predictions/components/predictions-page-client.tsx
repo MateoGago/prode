@@ -9,6 +9,7 @@ import type {
 } from "@/features/predictions/entities/prediction";
 import type { GroupBlock } from "@/features/predictions/entities/predictions-page";
 
+import { BatchBar } from "./batch-bar";
 import { FilterSegment } from "./filter-segment";
 import { FilteredGroupsOrEmpty } from "./filtered-groups-or-empty";
 import { GroupNav } from "./group-nav";
@@ -162,7 +163,8 @@ export function PredictionsPageClient({
       <FilterSegment />
 
       <FilteredGroupsOrEmpty>
-        <div className="grid gap-8 px-[18px] pt-4">
+        {/* pb clears the fixed BatchBar so the last cards aren't hidden behind it */}
+        <div className="grid gap-8 px-[18px] pt-4 pb-28">
           {generalError ? (
             <p
               role="alert"
@@ -187,6 +189,9 @@ export function PredictionsPageClient({
           ))}
         </div>
       </FilteredGroupsOrEmpty>
+
+      {/* Sibling of the scroll content (constraint A): fixed, never inside it. */}
+      <BatchBar />
     </PredictionsProvider>
   );
 }

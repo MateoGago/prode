@@ -18,9 +18,11 @@ import {
   useContext,
   useMemo,
   useState,
+  useTransition,
   type ReactNode,
 } from "react";
 
+import { saveBatchPredictions } from "@/features/predictions/actions/save-batch-predictions";
 import type { PredictionInput } from "@/features/predictions/entities/prediction";
 import type { GroupBlock } from "@/features/predictions/entities/predictions-page";
 import {
@@ -120,8 +122,7 @@ export function PredictionsProvider({
   children,
   now = new Date(),
 }: PredictionsProviderProps) {
-  // _setSavedMap: promoted to a real setter in Slice 4 when batch results arrive
-  const [savedMap, _setSavedMap] =
+  const [savedMap, setSavedMap] =
     useState<Record<string, PredictionInput>>(initialPredictions);
   const [workingMap, setWorkingMap] = useState<Record<string, PredictionInput>>(
     {},
@@ -130,8 +131,7 @@ export function PredictionsProvider({
   const [errorsByMatchId, setErrorsByMatchId] = useState<
     Record<string, string>
   >({});
-  // _setPending: set to true during batch save transition in Slice 4
-  const [pending, _setPending] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   // All matches flattened (needed for deriveProgress's BoardMatch array)
   const allMatches = useMemo(
@@ -255,9 +255,56 @@ export function PredictionsProvider({
     }
   }
 
-  /** Stub — replaced in Slice 4 with the real Server Action + useTransition. */
+  /**
+   * Persist the dirty, non-locked batch in one roundtrip. On per-match success
+   * we promote working→saved locally (badge flips only on ok:true — no
+   * optimistic flip, design §2); on per-match failure we record the reason and
+   * leave the edit dirty. The action revalidates the route server-side, so the
+   * next render re-seeds authoritative SAVED state.
+   */
   async function saveBatch(): Promise<void> {
-    // no-op in Slice 1
+    const items = getBatch();
+    if (items.length === 0) return;
+
+    startTransition(async () => {
+      const { results } = await saveBatchPredictions({ items });
+
+      const itemById = new Map(items.map((item) => [item.matchId, item]));
+      const okIds = results.filter((r) => r.ok).map((r) => r.matchId);
+      const failed = results.filter(
+        (r): r is Extract<typeof r, { ok: false }> => !r.ok,
+      );
+
+      if (okIds.length > 0) {
+        setSavedMap((current) => {
+          const next = { ...current };
+          for (const id of okIds) {
+            const item = itemById.get(id);
+            if (item) {
+              next[id] = {
+                homeScore: item.homeScore,
+                awayScore: item.awayScore,
+                advancerTeamId: item.advancerTeamId,
+              };
+            }
+          }
+          return next;
+        });
+        setWorkingMap((current) => {
+          const next = { ...current };
+          for (const id of okIds) delete next[id];
+          return next;
+        });
+      }
+
+      if (failed.length > 0) {
+        setErrorsByMatchId((current) => {
+          const next = { ...current };
+          for (const f of failed) next[f.matchId] = f.reason;
+          return next;
+        });
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
