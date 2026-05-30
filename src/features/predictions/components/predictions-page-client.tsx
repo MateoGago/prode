@@ -9,6 +9,8 @@ import type {
 } from "@/features/predictions/entities/prediction";
 import type { GroupBlock } from "@/features/predictions/entities/predictions-page";
 
+import { FilterSegment } from "./filter-segment";
+import { GroupNav } from "./group-nav";
 import { GroupSection } from "./group-section";
 import { PredictionsProvider } from "./predictions-provider";
 import { ProgressHeader } from "./progress-header";
@@ -153,6 +155,10 @@ export function PredictionsPageClient({
       groups={groups}
     >
       <ProgressHeader />
+
+      {/* Group nav chips + segmented filter — Slice 3 */}
+      <GroupNav />
+      <FilterSegment />
 
       <div className="grid gap-8 px-[18px] pt-4">
         {generalError ? (
