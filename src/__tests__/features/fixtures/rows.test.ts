@@ -67,8 +67,10 @@ describe("matchToRow", () => {
     const row = matchToRow(groupMatch(), ids);
     expect(row.home_team_id).toBe("uuid-mexico");
     expect(row.away_team_id).toBe("uuid-rsa");
-    expect(row.home_placeholder).toBeNull();
-    expect(row.away_placeholder).toBeNull();
+    // Placeholder fields are OMITTED (undefined) when null — not written as null
+    // — so the upsert never overwrites an existing DB placeholder with null.
+    expect(row.home_placeholder).toBeUndefined();
+    expect(row.away_placeholder).toBeUndefined();
     expect(row.matchday).toBe(1);
     expect(row.round).toBe("group");
     expect(row.kickoff_at).toBe("2026-06-11T19:00:00.000Z");
@@ -128,5 +130,39 @@ describe("matchToRow", () => {
     expect(row.penalty_winner_team_id).toBeNull();
     expect(row.advancer_team_id).toBeNull();
     expect(row.status).toBe("scheduled");
+  });
+
+  it("omits placeholder fields when null so upsert preserves existing DB value (PRO-34 AC)", () => {
+    // When a sync run resolves a knockout team, the domain Match has
+    // homePlaceholder: null (team is now known). The row must NOT include
+    // home_placeholder at all — otherwise the upsert overwrites the stored
+    // "1A" / "W73" etc. with null, losing the original slot label.
+    const argentina: Team = {
+      id: "",
+      externalRef: "argentina",
+      name: "Argentina",
+      groupLabel: "A",
+      flagUrl: null,
+    };
+    const resolvedKo: Match = {
+      ...knockoutMatch(),
+      homeTeam: mexico,
+      awayTeam: argentina,
+      homePlaceholder: null, // team is now known — placeholder no longer on domain object
+      awayPlaceholder: null,
+      status: "scheduled",
+    };
+    const map = new Map<string, string>([
+      ["mexico", "uuid-mexico"],
+      ["argentina", "uuid-arg"],
+    ]);
+    const row = matchToRow(resolvedKo, map);
+    expect(row.home_team_id).toBe("uuid-mexico");
+    expect(row.away_team_id).toBe("uuid-arg");
+    // Crucially: these fields must be absent from the row (undefined), not null.
+    // Supabase upsert only writes columns present in the payload, so the DB's
+    // existing "2A" / "2B" strings survive the sync untouched.
+    expect("home_placeholder" in row).toBe(false);
+    expect("away_placeholder" in row).toBe(false);
   });
 });
