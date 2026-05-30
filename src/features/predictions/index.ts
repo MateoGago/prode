@@ -6,6 +6,7 @@ export { AdvancerPicker } from "./components/advancer-picker";
 export { MatchCard } from "./components/match-card";
 export { GroupSection } from "./components/group-section";
 export { PredictionsPageClient } from "./components/predictions-page-client";
+export { ProgressHeader } from "./components/progress-header";
 export {
   PredictionsProvider,
   usePredictionsBoard,
