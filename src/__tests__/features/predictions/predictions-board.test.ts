@@ -5,6 +5,7 @@ import {
   deriveProgress,
   dirtySet,
   isDirty,
+  selectBatch,
 } from "@/features/predictions/entities/predictions-board";
 import type { LockInfo } from "@/features/predictions/entities/predictions-board";
 import type { PredictionInput } from "@/features/predictions/entities/prediction";
@@ -281,5 +282,77 @@ describe("dirtySet (REQ-07)", () => {
       m1: { homeScore: 0, awayScore: 0, advancerTeamId: null },
     };
     expect(dirtySet({}, workingMap)).toEqual(new Set(["m1"]));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-04 / REQ-07: selectBatch
+// ---------------------------------------------------------------------------
+
+describe("selectBatch (REQ-04, REQ-07)", () => {
+  const base: PredictionInput = {
+    homeScore: 1,
+    awayScore: 0,
+    advancerTeamId: null,
+  };
+  const changed: PredictionInput = {
+    homeScore: 2,
+    awayScore: 0,
+    advancerTeamId: null,
+  };
+
+  it("returns empty array when working map is empty", () => {
+    expect(selectBatch({}, { m1: base }, new Set())).toEqual([]);
+  });
+
+  it("returns dirty non-locked items only", () => {
+    const workingMap: Record<string, PredictionInput> = {
+      m1: changed,
+      m2: { homeScore: 1, awayScore: 0, advancerTeamId: null }, // same as saved → not dirty
+    };
+    const savedMap: Record<string, PredictionInput> = {
+      m1: base,
+      m2: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+    };
+    const result = selectBatch(workingMap, savedMap, new Set());
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      matchId: "m1",
+      homeScore: 2,
+      awayScore: 0,
+    });
+  });
+
+  it("excludes locked match even if dirty (REQ-07 scenario)", () => {
+    const workingMap: Record<string, PredictionInput> = {
+      m1: changed,
+    };
+    const savedMap: Record<string, PredictionInput> = {
+      m1: base,
+    };
+    const lockSet = new Set(["m1"]);
+    expect(selectBatch(workingMap, savedMap, lockSet)).toEqual([]);
+  });
+
+  it("includes unsaved (no saved entry) dirty match", () => {
+    const workingMap: Record<string, PredictionInput> = {
+      m1: { homeScore: 0, awayScore: 0, advancerTeamId: null },
+    };
+    const result = selectBatch(workingMap, {}, new Set());
+    expect(result).toHaveLength(1);
+    expect(result[0].matchId).toBe("m1");
+  });
+
+  it("preserves advancerTeamId in the batch item", () => {
+    const withAdvancer: PredictionInput = {
+      homeScore: 1,
+      awayScore: 1,
+      advancerTeamId: "team-a",
+    };
+    const workingMap: Record<string, PredictionInput> = {
+      m1: withAdvancer,
+    };
+    const result = selectBatch(workingMap, {}, new Set());
+    expect(result[0].advancerTeamId).toBe("team-a");
   });
 });
