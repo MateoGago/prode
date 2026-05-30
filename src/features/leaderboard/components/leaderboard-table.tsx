@@ -8,14 +8,17 @@ export type LeaderboardRow = {
   playerId: string;
   playerName: string;
   totalPoints: number;
+  /**
+   * When provided, the player name cell is wrapped in a Next.js Link.
+   * Precomputed on the server so no function crosses the RSC boundary.
+   */
+  href?: string;
 };
 
 export type LeaderboardTableProps = {
   rows: LeaderboardRow[];
   emptyMessage?: string;
   ariaLabel?: string;
-  /** When provided, wraps the player name cell in a Next.js Link. */
-  getPlayerHref?: (row: LeaderboardRow) => string;
   /** When set, the matching row receives a highlight background and aria-current="true". */
   highlightPlayerId?: string;
 };
@@ -45,7 +48,6 @@ export function LeaderboardTable({
   rows,
   emptyMessage,
   ariaLabel = "Tabla de posiciones",
-  getPlayerHref,
   highlightPlayerId,
 }: LeaderboardTableProps) {
   if (rows.length === 0) {
@@ -102,9 +104,9 @@ export function LeaderboardTable({
                       {row.rank}
                     </td>
                     <td className="px-3 py-2">
-                      {getPlayerHref ? (
+                      {row.href ? (
                         <Link
-                          href={getPlayerHref(row)}
+                          href={row.href}
                           className="font-medium text-primary underline-offset-4 hover:underline focus-visible:underline"
                         >
                           {row.playerName}
