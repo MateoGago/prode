@@ -245,4 +245,67 @@ describe("LeaderboardTable", () => {
       screen.getByText("No hay posiciones para mostrar."),
     ).toBeInTheDocument();
   });
+
+  // ── PRO-53: flat leaderboard until points differ ─────────────────────────
+
+  it("no podium when all players are tied at 0 pts (season start)", () => {
+    const allZero: LeaderboardRow[] = [
+      { playerId: "a1", playerName: "Ana", totalPoints: 0 },
+      { playerId: "a2", playerName: "Bruno", totalPoints: 0 },
+      { playerId: "a3", playerName: "Carla", totalPoints: 0 },
+      { playerId: "a4", playerName: "Diego", totalPoints: 0 },
+    ];
+    render(<LeaderboardTable rows={allZero} />);
+
+    // No podium section
+    expect(
+      screen.queryByRole("region", { name: /podio/i }),
+    ).not.toBeInTheDocument();
+
+    // No crown
+    expect(screen.queryByText("👑")).not.toBeInTheDocument();
+
+    // All four players appear in the flat list
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(screen.getByText("Bruno")).toBeInTheDocument();
+    expect(screen.getByText("Carla")).toBeInTheDocument();
+    expect(screen.getByText("Diego")).toBeInTheDocument();
+  });
+
+  it("no podium when 3+ players are all tied at the same non-zero score", () => {
+    const allTied: LeaderboardRow[] = [
+      { playerId: "t1", playerName: "Player 1", totalPoints: 15 },
+      { playerId: "t2", playerName: "Player 2", totalPoints: 15 },
+      { playerId: "t3", playerName: "Player 3", totalPoints: 15 },
+    ];
+    render(<LeaderboardTable rows={allTied} />);
+
+    expect(
+      screen.queryByRole("region", { name: /podio/i }),
+    ).not.toBeInTheDocument();
+
+    // All players render in the flat table (rank badges present)
+    expect(screen.getByTestId("position-badge-t1")).toBeInTheDocument();
+    expect(screen.getByTestId("position-badge-t2")).toBeInTheDocument();
+    expect(screen.getByTestId("position-badge-t3")).toBeInTheDocument();
+  });
+
+  it("podium renders when points differ (top player has more than the rest)", () => {
+    const withSpread: LeaderboardRow[] = [
+      { playerId: "s1", playerName: "Leader", totalPoints: 50 },
+      { playerId: "s2", playerName: "Second", totalPoints: 30 },
+      { playerId: "s3", playerName: "Third", totalPoints: 10 },
+      { playerId: "s4", playerName: "Fourth", totalPoints: 5 },
+    ];
+    render(<LeaderboardTable rows={withSpread} />);
+
+    // Podium present with top-3
+    const podium = screen.getByRole("region", { name: /podio/i });
+    expect(podium).toHaveTextContent("Leader");
+    expect(podium).toHaveTextContent("Second");
+    expect(podium).toHaveTextContent("Third");
+
+    // Rank 4 in flat list
+    expect(screen.getByTestId("position-badge-s4")).toHaveTextContent("4");
+  });
 });

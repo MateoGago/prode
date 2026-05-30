@@ -110,7 +110,7 @@ function Podium({
   return (
     <section
       aria-label="Podio"
-      className="flex items-end justify-center gap-2.5 mx-1.5 mb-1.5 mt-4 h-[200px]"
+      className="flex items-end justify-center gap-2.5 mx-1.5 mb-1.5 mt-7 pt-2 h-[200px]"
     >
       {ordered.map((row) => {
         const r = row.rank as 1 | 2 | 3;
@@ -235,8 +235,12 @@ export function LeaderboardTable({
 
   const rankedRows = getRankedRows(rows);
 
-  // Podium: only show when there are at least 3 ranked rows
-  const hasPodium = rankedRows.length >= 3;
+  // Podium: only show when there are ≥3 rows AND players are NOT all tied on
+  // the same points (e.g. season start at 0 should be a flat list, not a
+  // degenerate podium where everyone is gold with a crown).
+  const hasPodium =
+    rankedRows.length >= 3 &&
+    new Set(rankedRows.map((r) => r.totalPoints)).size > 1;
   const podiumRows = hasPodium
     ? (rankedRows.slice(0, 3) as [
         RankedLeaderboardRow,
@@ -259,11 +263,8 @@ export function LeaderboardTable({
         )}
 
         {listRows.length > 0 && (
-          <div className="overflow-x-auto mt-3">
-            <table
-              className="min-w-[440px] w-full text-sm"
-              aria-label={ariaLabel}
-            >
+          <div className="mt-3">
+            <table className="w-full text-sm" aria-label={ariaLabel}>
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th scope="col" className="px-3 py-2 font-medium">
