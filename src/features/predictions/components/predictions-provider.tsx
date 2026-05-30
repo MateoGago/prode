@@ -9,12 +9,14 @@
  * - All derivations (progress, dirty set, card states, group chips) are pure
  *   functions from predictions-board.ts — no logic lives in this file.
  *
- * Slice 4 wires saveBatch() with the real Server Action + useTransition.
- * This scaffold exposes saveBatch() as a no-op stub.
+ * Slice 4 wires saveBatch() with the real Server Action + useTransition:
+ * it collects the dirty, non-locked batch via getBatch() and persists it in one
+ * roundtrip, promoting accepted matches working→saved locally.
  */
 
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
   useState,
@@ -83,8 +85,8 @@ interface PredictionsBoardActions {
    */
   getFilterCount(kind: FilterKind): number;
   /**
-   * Persist dirty, non-locked predictions.
-   * Stub in Slice 1 — wired to the real Server Action in Slice 4.
+   * Persist the dirty, non-locked predictions via the saveBatchPredictions
+   * Server Action, promoting accepted matches working→saved locally.
    */
   saveBatch(): Promise<void>;
 }
@@ -172,36 +174,45 @@ export function PredictionsProvider({
   // Actions
   // ---------------------------------------------------------------------------
 
-  function setPrediction(matchId: string, next: PredictionInput) {
-    setWorkingMap((current) => ({ ...current, [matchId]: next }));
-    // Clear any previous error for this match on edit
-    setErrorsByMatchId((current) => {
-      const { [matchId]: _, ...rest } = current;
-      return rest;
-    });
-  }
+  const setPrediction = useCallback(
+    (matchId: string, next: PredictionInput) => {
+      setWorkingMap((current) => ({ ...current, [matchId]: next }));
+      // Clear any previous error for this match on edit
+      setErrorsByMatchId((current) => {
+        const { [matchId]: _, ...rest } = current;
+        return rest;
+      });
+    },
+    [],
+  );
 
-  function getLock(matchId: string, kickoffAt: Date): LockInfo {
-    // Find match status from groups
-    let status: "scheduled" | "live" | "finished" | "confirmed" | undefined;
-    for (const group of groups) {
-      const match = group.matches.find((m) => m.id === matchId);
-      if (match) {
-        status = match.status as typeof status;
-        break;
+  const getLock = useCallback(
+    (matchId: string, kickoffAt: Date): LockInfo => {
+      // Find match status from groups
+      let status: "scheduled" | "live" | "finished" | "confirmed" | undefined;
+      for (const group of groups) {
+        const match = group.matches.find((m) => m.id === matchId);
+        if (match) {
+          status = match.status as typeof status;
+          break;
+        }
       }
-    }
-    return deriveLock({ kickoffAt, status }, now);
-  }
+      return deriveLock({ kickoffAt, status }, now);
+    },
+    [groups, now],
+  );
 
-  function getCardState(matchId: string, kickoffAt: Date): CardState {
-    const saved = savedMap[matchId] ?? null;
-    const working = workingMap[matchId];
-    const lock = getLock(matchId, kickoffAt);
-    return deriveCardState(saved, working, lock);
-  }
+  const getCardState = useCallback(
+    (matchId: string, kickoffAt: Date): CardState => {
+      const saved = savedMap[matchId] ?? null;
+      const working = workingMap[matchId];
+      const lock = getLock(matchId, kickoffAt);
+      return deriveCardState(saved, working, lock);
+    },
+    [savedMap, workingMap, getLock],
+  );
 
-  function getBatch(): UpsertItem[] {
+  const getBatch = useCallback((): UpsertItem[] => {
     // Build lock set using the injected clock (now prop, defaults to new Date())
     const lockSet = new Set<string>();
     for (const group of groups) {
@@ -217,52 +228,60 @@ export function PredictionsProvider({
       }
     }
     return selectBatch(workingMap, savedMap, lockSet);
-  }
+  }, [groups, now, workingMap, savedMap]);
 
-  function getFilterCount(kind: FilterKind): number {
-    let count = 0;
-    for (const group of groups) {
-      for (const match of group.matches) {
-        const lock = deriveLock(
-          {
-            kickoffAt: match.kickoffAt,
-            status: match.status as Parameters<typeof deriveLock>[0]["status"],
-          },
-          now,
-        );
-        if (
-          filterPredicate(
-            kind,
-            match.id,
-            savedMap,
-            workingMap,
-            lock,
-            match.kickoffAt,
+  const getFilterCount = useCallback(
+    (kind: FilterKind): number => {
+      let count = 0;
+      for (const group of groups) {
+        for (const match of group.matches) {
+          const lock = deriveLock(
+            {
+              kickoffAt: match.kickoffAt,
+              status: match.status as Parameters<
+                typeof deriveLock
+              >[0]["status"],
+            },
             now,
-          )
-        ) {
-          count++;
+          );
+          if (
+            filterPredicate(
+              kind,
+              match.id,
+              savedMap,
+              workingMap,
+              lock,
+              match.kickoffAt,
+              now,
+            )
+          ) {
+            count++;
+          }
         }
       }
-    }
-    return count;
-  }
+      return count;
+    },
+    [groups, now, savedMap, workingMap],
+  );
 
-  function jumpToGroup(label: string) {
+  const jumpToGroup = useCallback((label: string) => {
     const el = document.getElementById(label);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }
+  }, []);
 
   /**
-   * Persist the dirty, non-locked batch in one roundtrip. On per-match success
-   * we promote working→saved locally (badge flips only on ok:true — no
-   * optimistic flip, design §2); on per-match failure we record the reason and
-   * leave the edit dirty. The action revalidates the route server-side, so the
-   * next render re-seeds authoritative SAVED state.
+   * Persist the dirty, non-locked batch in one roundtrip. On per-match ok:true
+   * we promote working→saved LOCALLY — this is what updates THIS page's saved
+   * state and badge (no optimistic flip, design §2); on per-match failure we
+   * record the reason and leave the edit dirty. The action's
+   * revalidatePath("/predicciones") refreshes server-derived data for other
+   * views and for the next full navigation/remount — it does NOT re-seed this
+   * provider's in-memory savedMap, which is useState(initialPredictions) and
+   * will not pick up new props on a normal re-render.
    */
-  async function saveBatch(): Promise<void> {
+  const saveBatch = useCallback(async (): Promise<void> => {
     const items = getBatch();
     if (items.length === 0) return;
 
@@ -305,30 +324,49 @@ export function PredictionsProvider({
         });
       }
     });
-  }
+  }, [getBatch]);
 
   // ---------------------------------------------------------------------------
   // Context value
   // ---------------------------------------------------------------------------
 
-  const value: PredictionsBoardContext = {
-    savedMap,
-    workingMap,
-    dirty,
-    progress,
-    groupProgress,
-    filter,
-    errorsByMatchId,
-    pending,
-    setPrediction,
-    getLock,
-    getCardState,
-    getBatch,
-    setFilter,
-    getFilterCount,
-    jumpToGroup,
-    saveBatch,
-  };
+  const value: PredictionsBoardContext = useMemo(
+    () => ({
+      savedMap,
+      workingMap,
+      dirty,
+      progress,
+      groupProgress,
+      filter,
+      errorsByMatchId,
+      pending,
+      setPrediction,
+      getLock,
+      getCardState,
+      getBatch,
+      setFilter,
+      getFilterCount,
+      jumpToGroup,
+      saveBatch,
+    }),
+    [
+      savedMap,
+      workingMap,
+      dirty,
+      progress,
+      groupProgress,
+      filter,
+      errorsByMatchId,
+      pending,
+      setPrediction,
+      getLock,
+      getCardState,
+      getBatch,
+      getFilterCount,
+      jumpToGroup,
+      saveBatch,
+    ],
+  );
 
   return (
     <PredictionsBoardCtx.Provider value={value}>
