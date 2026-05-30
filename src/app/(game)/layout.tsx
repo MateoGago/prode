@@ -3,14 +3,37 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
+import { AppSidebarNav, AppTabBar } from "@/features/auth/components/app-nav";
 import { createClient } from "@/shared/supabase/server";
+
+function Wordmark() {
+  return (
+    <Link
+      href="/"
+      className="font-[family-name:var(--font-display)] text-lg font-bold tracking-[0.02em]"
+    >
+      PRODE
+    </Link>
+  );
+}
+
+function initialsOf(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 /**
  * Protected app shell — the authoritative authorization gate (REQ-AUTH-4).
  *
  * Runs `getUser()` on every render (verifies the JWT server-side). An
  * unauthenticated request is redirected to /login before any game content is
- * rendered, so nothing leaks in the response body.
+ * rendered, so nothing leaks in the response body. The admin nav item reuses
+ * the same `profiles.role === "admin"` gate the /admin route enforces, so the
+ * link is a hint only — never the boundary.
  */
 export default async function GameLayout({
   children,
@@ -24,47 +47,63 @@ export default async function GameLayout({
 
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isAdmin = profile?.role === "admin";
+
   const displayName =
     (user.user_metadata?.display_name as string | undefined) ??
     user.email ??
     "Jugador";
+  const initials = initialsOf(displayName) || "JG";
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <span className="font-[family-name:var(--font-display)] text-lg font-bold tracking-tight">
-            Prode <span className="text-primary">2026</span>
-          </span>
-          <nav
-            aria-label="Navegación principal"
-            className="flex items-center gap-4"
-          >
-            <Link
-              href="/"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+    <div className="flex min-h-dvh flex-col md:flex-row">
+      {/* Desktop: persistent left sidebar. */}
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r border-border bg-background/60 px-4 py-6 backdrop-blur md:flex">
+        <div className="px-2">
+          <Wordmark />
+        </div>
+        <AppSidebarNav isAdmin={isAdmin} />
+        <div className="mt-auto grid gap-3 border-t border-border pt-4">
+          <div className="flex items-center gap-2.5 px-1">
+            <span
+              aria-hidden="true"
+              className="flex size-9 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary"
             >
-              Inicio
-            </Link>
-            <Link
-              href="/tabla"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Tabla
-            </Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              {displayName}
+              {initials}
             </span>
-            <SignOutButton />
+            <span className="truncate text-sm font-medium">{displayName}</span>
           </div>
+          <SignOutButton />
+        </div>
+      </aside>
+
+      {/* Mobile: slim sticky top header. */}
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl md:hidden">
+        <Wordmark />
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary"
+          >
+            {initials}
+          </span>
+          <SignOutButton />
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {children}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Bottom padding clears the fixed mobile tab bar; md drops it. */}
+        <main className="container-app flex-1 py-6 pb-24 md:py-10 md:pb-10">
+          {children}
+        </main>
+      </div>
+
+      <AppTabBar isAdmin={isAdmin} />
     </div>
   );
 }
