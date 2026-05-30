@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -35,6 +36,23 @@ export default async function GameLayout({
           <span className="font-[family-name:var(--font-display)] text-lg font-bold tracking-tight">
             Prode <span className="text-primary">2026</span>
           </span>
+          <nav
+            aria-label="Navegación principal"
+            className="flex items-center gap-4"
+          >
+            <Link
+              href="/"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Inicio
+            </Link>
+            <Link
+              href="/tabla"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Tabla
+            </Link>
+          </nav>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {displayName}
