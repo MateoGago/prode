@@ -66,8 +66,13 @@ export default async function PrediccionesPage() {
 
   return (
     <section className="grid gap-6">
-      <header className="grid gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Predicciones</h1>
+      <header className="grid gap-1.5">
+        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          Fase de grupos
+        </p>
+        <h1 className="font-heading text-3xl font-bold tracking-tight">
+          Partidos
+        </h1>
         <p className="max-w-prose text-sm text-muted-foreground">
           Cargá y guardá tus resultados partido por partido. Podés avanzar de
           forma progresiva por grupo y jornada.
