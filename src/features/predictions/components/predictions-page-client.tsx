@@ -41,7 +41,7 @@ export function PredictionsPageClient({
 
       <FilteredGroupsOrEmpty>
         {/* pb clears the fixed BatchBar so the last cards aren't hidden behind it */}
-        <div className="grid gap-8 px-[18px] pt-4 pb-28">
+        <div className="grid gap-8 px-[18px] pt-4 pb-44 md:pb-28">
           {groups.map((group) => (
             <GroupSection
               key={group.groupLabel}
