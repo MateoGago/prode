@@ -1,8 +1,10 @@
 // predictions: save a user's prediction and enforce the pre-kickoff lock.
 // Pure rules + types live in entities/; the save action is the I/O shell.
 
+export { saveBatchPredictions } from "./actions/save-batch-predictions";
 export { savePrediction } from "./actions/save-prediction";
 export { AdvancerPicker } from "./components/advancer-picker";
+export { BatchBar } from "./components/batch-bar";
 export { FilterSegment } from "./components/filter-segment";
 export { GroupNav } from "./components/group-nav";
 export { MatchCard } from "./components/match-card";
@@ -21,6 +23,12 @@ export type {
   PredictionsBoardContext,
   PredictionsProviderProps,
 } from "./components/predictions-provider";
+export { decideBatch } from "./entities/batch";
+export type {
+  BatchResultEntry,
+  BatchSaveInput,
+  BatchSaveResult,
+} from "./entities/batch";
 export type { GroupBlock } from "./entities/predictions-page";
 export type {
   MatchContext,
