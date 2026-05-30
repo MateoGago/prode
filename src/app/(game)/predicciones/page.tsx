@@ -80,7 +80,6 @@ export default async function PrediccionesPage() {
       </header>
 
       <PredictionsPageClient
-        userId={user.id}
         groups={groups}
         initialPredictionsByMatchId={initialPredictionsByMatchId}
       />

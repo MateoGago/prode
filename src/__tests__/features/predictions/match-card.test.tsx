@@ -1,19 +1,45 @@
+// @vitest-environment jsdom
+
+/**
+ * Tests for the MatchCard presentational component (post-batch refactor).
+ *
+ * MatchCard is now a pure presentational card: it receives `cardState`,
+ * `prediction`, `error` and a single `onChange` callback. There is NO per-card
+ * save button anymore — the batch bar is the only save path (constraint).
+ *
+ * These tests cover the behavior that matters for the card itself: the visible
+ * state indicators, stepper enable/disable rules, the REQ-02 activation on the
+ * first "+" tap, the confirmed panel, the KO-draw advancer, and the error copy.
+ */
+
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import type { Match, Round, Team } from "@/features/fixtures/entities/match";
 import { MatchCard } from "@/features/predictions/components/match-card";
-import type { Match, Round } from "@/features/fixtures/entities/match";
+import type { PredictionInput } from "@/features/predictions/entities/prediction";
+import type { CardState } from "@/features/predictions/entities/predictions-board";
 
-function team(id: string, name: string) {
-  return {
-    id,
-    externalRef: id.toUpperCase(),
-    name,
-    groupLabel: "C",
-    flagUrl: null,
-  };
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const HOME: Team = {
+  id: "ar",
+  externalRef: "AR",
+  name: "Argentina",
+  groupLabel: "A",
+  flagUrl: null,
+};
+
+const AWAY: Team = {
+  id: "br",
+  externalRef: "BR",
+  name: "Brasil",
+  groupLabel: "A",
+  flagUrl: null,
+};
 
 function makeMatch(overrides: Partial<Match> = {}): Match {
   return {
@@ -21,12 +47,12 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
     externalRef: "M1",
     round: "group" as Round,
     multiplier: 1,
-    matchday: 2,
-    homeTeam: team("ar", "Argentina"),
-    awayTeam: team("mx", "México"),
+    matchday: 1,
+    homeTeam: HOME,
+    awayTeam: AWAY,
     homePlaceholder: null,
     awayPlaceholder: null,
-    kickoffAt: new Date("2026-06-13T16:00:00.000Z"),
+    kickoffAt: new Date("2026-06-10T18:00:00.000Z"),
     status: "scheduled",
     homeScore: null,
     awayScore: null,
@@ -37,143 +63,190 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
   };
 }
 
-describe("MatchCard — OPEN state", () => {
-  it("increments the home score through the Stepper", async () => {
+function renderCard(props: {
+  match?: Match;
+  cardState: CardState;
+  prediction: PredictionInput | null;
+  error?: string | null;
+  onChange?: (next: PredictionInput) => void;
+}) {
+  const match = props.match ?? makeMatch();
+  const onChange = props.onChange ?? vi.fn();
+  render(
+    <MatchCard
+      match={match}
+      cardState={props.cardState}
+      prediction={props.prediction}
+      error={props.error}
+      onChange={onChange}
+    />,
+  );
+  return { match, onChange };
+}
+
+// The home/away stepper toolbars are labelled "Goles de {teamName}" (see
+// ScoreControl). Querying within that group keeps the +/- lookups unambiguous.
+function homeStepper() {
+  return screen.getByRole("group", { name: /goles de argentina/i });
+}
+function awayStepper() {
+  return screen.getByRole("group", { name: /goles de brasil/i });
+}
+function incrementBtn(group: HTMLElement) {
+  return within(group).getByRole("button", { name: /sumar|incrementar|\+/i });
+}
+function decrementBtn(group: HTMLElement) {
+  return within(group).getByRole("button", { name: /restar|decrementar|−|-/i });
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("MatchCard", () => {
+  it("empty state: shows muted placeholder, decrement disabled, '+' activates with {1,0,null}", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <MatchCard
-        match={makeMatch()}
-        prediction={{ homeScore: 2, awayScore: 1, advancerTeamId: null }}
-        isLocked={false}
-        onChange={onChange}
-        onSubmit={vi.fn()}
-      />,
-    );
-    await user.click(
-      screen.getByRole("button", { name: /sumar a goles de argentina/i }),
-    );
+    const { onChange } = renderCard({ cardState: "empty", prediction: null });
+
+    // The score shows the muted "–" placeholder, not "0".
+    const home = homeStepper();
+    expect(within(home).getByText("–")).toBeInTheDocument();
+    expect(within(home).queryByText("0")).not.toBeInTheDocument();
+
+    // Decrement is disabled in the empty state.
+    expect(decrementBtn(home)).toBeDisabled();
+
+    // REQ-02 activation: first "+" on home → {homeScore:1, awayScore:0, advancerTeamId:null}.
+    await user.click(incrementBtn(home));
     expect(onChange).toHaveBeenCalledWith({
-      homeScore: 3,
-      awayScore: 1,
+      homeScore: 1,
+      awayScore: 0,
       advancerTeamId: null,
     });
   });
 
-  it("shows the Guardar CTA", () => {
-    render(
-      <MatchCard
-        match={makeMatch()}
-        prediction={{ homeScore: 0, awayScore: 0, advancerTeamId: null }}
-        isLocked={false}
-        onChange={vi.fn()}
-        onSubmit={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("button", { name: /guardar/i })).toBeEnabled();
-  });
-});
+  it("dirty state: shows 'Sin guardar', scores 1 and 0, steppers enabled", () => {
+    renderCard({
+      cardState: "dirty",
+      prediction: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+    });
 
-describe("MatchCard — LOCKED state", () => {
-  it("disables the stepper and explains the match already started", () => {
-    render(
-      <MatchCard
-        match={makeMatch()}
-        prediction={{ homeScore: 1, awayScore: 0, advancerTeamId: null }}
-        isLocked
-        onChange={vi.fn()}
-        onSubmit={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByRole("button", { name: /sumar a goles de argentina/i }),
-    ).toBeDisabled();
-    expect(screen.getByText(/ya empezó/i)).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /guardar/i }),
-    ).not.toBeInTheDocument();
-  });
-});
+    expect(screen.getByText(/sin guardar/i)).toBeInTheDocument();
 
-describe("MatchCard — CONFIRMED state", () => {
-  it("renders Vos vs Real and the exact hit badge", () => {
-    render(
-      <MatchCard
-        match={makeMatch({
-          status: "confirmed",
-          homeScore: 2,
-          awayScore: 1,
-          resultConfirmedAt: new Date("2026-06-13T18:00:00.000Z"),
-        })}
-        prediction={{ homeScore: 2, awayScore: 1, advancerTeamId: null }}
-        isLocked
-        onChange={vi.fn()}
-      />,
-    );
-    expect(screen.getByText(/vos/i)).toBeInTheDocument();
-    expect(screen.getByText(/real/i)).toBeInTheDocument();
-    expect(screen.getByText(/exacto/i)).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /sumar/i }),
-    ).not.toBeInTheDocument();
-  });
-});
+    const home = homeStepper();
+    const away = awayStepper();
+    expect(within(home).getByText("1")).toBeInTheDocument();
+    expect(within(away).getByText("0")).toBeInTheDocument();
 
-describe("MatchCard — advancer picker visibility", () => {
-  it("is hidden on a group draw", () => {
-    render(
-      <MatchCard
-        match={makeMatch()}
-        prediction={{ homeScore: 1, awayScore: 1, advancerTeamId: null }}
-        isLocked={false}
-        onChange={vi.fn()}
-        onSubmit={vi.fn()}
-      />,
-    );
-    expect(
-      screen.queryByRole("group", { name: /avanza/i }),
-    ).not.toBeInTheDocument();
+    expect(incrementBtn(home)).toBeEnabled();
+    expect(decrementBtn(home)).toBeEnabled();
+    expect(incrementBtn(away)).toBeEnabled();
   });
 
-  it("shows on a knockout draw with both teams as options", () => {
-    render(
-      <MatchCard
-        match={makeMatch({ round: "r16", multiplier: 2, matchday: null })}
-        prediction={{ homeScore: 1, awayScore: 1, advancerTeamId: null }}
-        isLocked={false}
-        onChange={vi.fn()}
-        onSubmit={vi.fn()}
-      />,
-    );
-    const picker = screen.getByRole("group", { name: /avanza/i });
-    expect(picker).toBeInTheDocument();
-    expect(
-      within(picker).getByRole("button", { name: /argentina/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(picker).getByRole("button", { name: /méxico/i }),
-    ).toBeInTheDocument();
+  it("saved state: shows green '✓ Guardado' pill, steppers STILL enabled (saved ≠ locked)", () => {
+    renderCard({
+      cardState: "saved",
+      prediction: { homeScore: 2, awayScore: 1, advancerTeamId: null },
+    });
+
+    expect(screen.getByText(/guardado/i)).toBeInTheDocument();
+
+    // Constraint B: saved is editable — steppers stay active.
+    expect(incrementBtn(homeStepper())).toBeEnabled();
+    expect(decrementBtn(homeStepper())).toBeEnabled();
   });
 
-  it("clears a stale advancer when the KO prediction stops being a draw", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <MatchCard
-        match={makeMatch({ round: "r16", multiplier: 2, matchday: null })}
-        prediction={{ homeScore: 1, awayScore: 1, advancerTeamId: "ar" }}
-        isLocked={false}
-        onChange={onChange}
-        onSubmit={vi.fn()}
-      />,
-    );
-    await user.click(
-      screen.getByRole("button", { name: /sumar a goles de argentina/i }),
-    );
-    expect(onChange).toHaveBeenCalledWith({
+  it("locked state: steppers disabled, shows 'Este partido ya empezó', no Guardado pill", () => {
+    renderCard({
+      cardState: "locked",
+      prediction: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+    });
+
+    expect(screen.getByText(/este partido ya empezó/i)).toBeInTheDocument();
+    expect(screen.queryByText(/guardado/i)).not.toBeInTheDocument();
+
+    expect(incrementBtn(homeStepper())).toBeDisabled();
+    expect(decrementBtn(homeStepper())).toBeDisabled();
+  });
+
+  it("confirmed state: renders ConfirmedPanel with Vos/Real and a hit label", () => {
+    const match = makeMatch({
+      status: "confirmed",
       homeScore: 2,
       awayScore: 1,
-      advancerTeamId: null,
+      resultConfirmedAt: new Date("2026-06-10T20:00:00.000Z"),
     });
+    renderCard({
+      match,
+      cardState: "confirmed",
+      prediction: { homeScore: 2, awayScore: 1, advancerTeamId: null },
+    });
+
+    expect(screen.getByText("Vos")).toBeInTheDocument();
+    expect(screen.getByText("Real")).toBeInTheDocument();
+    // Exact match (predicted 2–1, real 2–1).
+    expect(screen.getByText(/exacto/i)).toBeInTheDocument();
+  });
+
+  it("KO draw: renders the AdvancerPicker when round != group and scores are equal", () => {
+    const match = makeMatch({ round: "r16", multiplier: 2 });
+    renderCard({
+      match,
+      cardState: "dirty",
+      prediction: { homeScore: 1, awayScore: 1, advancerTeamId: null },
+    });
+
+    // AdvancerPicker is a fieldset asking who advances on penalties; its team
+    // buttons are the only ones carrying aria-pressed (the steppers don't).
+    expect(screen.getByText(/quién avanza por penales/i)).toBeInTheDocument();
+    const advancerButtons = screen
+      .getAllByRole("button")
+      .filter((b) => b.hasAttribute("aria-pressed"));
+    expect(advancerButtons).toHaveLength(2);
+    expect(advancerButtons[0]).toHaveTextContent("Argentina");
+    expect(advancerButtons[1]).toHaveTextContent("Brasil");
+  });
+
+  it("error 'locked': renders a destructive alert with the locked copy", () => {
+    renderCard({
+      cardState: "saved",
+      prediction: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+      error: "locked",
+    });
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/ya empezó/i);
+  });
+
+  it("error unknown reason: renders the generic fallback copy", () => {
+    renderCard({
+      cardState: "saved",
+      prediction: { homeScore: 1, awayScore: 0, advancerTeamId: null },
+      error: "unauthenticated",
+    });
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("No se pudo guardar. Probá de nuevo.");
+  });
+
+  it("no per-card save button in any editable state (batch bar is the only save path)", () => {
+    for (const cardState of ["empty", "dirty", "saved"] as const) {
+      const { unmount } = render(
+        <MatchCard
+          match={makeMatch()}
+          cardState={cardState}
+          prediction={
+            cardState === "empty"
+              ? null
+              : { homeScore: 1, awayScore: 0, advancerTeamId: null }
+          }
+          onChange={vi.fn()}
+        />,
+      );
+      expect(
+        screen.queryByRole("button", { name: /guardar/i }),
+      ).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });
