@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 describe("ConfirmResultForm", () => {
-  it("renders the home and away score number inputs with their labels", () => {
+  it("renders Local and Visitante Stepper groups", () => {
     render(
       <ConfirmResultForm
         matchId="m1"
@@ -46,8 +46,10 @@ describe("ConfirmResultForm", () => {
       />,
     );
 
-    expect(screen.getByLabelText(/local/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/visitante/i)).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /local/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /visitante/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders a 'Confirmar resultado' submit button", () => {
@@ -66,7 +68,7 @@ describe("ConfirmResultForm", () => {
     ).toBeInTheDocument();
   });
 
-  it("rejects a negative score and does not call onSubmit", async () => {
+  it("increments home score via Stepper + button", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(ok());
     render(
@@ -75,23 +77,24 @@ describe("ConfirmResultForm", () => {
         round="group"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={0}
+        defaultAwayScore={0}
         onSubmit={onSubmit}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "-1");
-    await user.type(screen.getByLabelText(/visitante/i), "0");
+    await user.click(screen.getByRole("button", { name: /sumar a local/i }));
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
 
-    expect(
-      await screen.findByText("El marcador no puede ser negativo"),
-    ).toBeInTheDocument();
-    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const arg = onSubmit.mock.calls[0][0] as ResultInput;
+    expect(arg.homeScore).toBe(1);
+    expect(arg.awayScore).toBe(0);
   });
 
-  it("rejects a non-integer score and does not call onSubmit", async () => {
+  it("increments away score via Stepper + button", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(ok());
     render(
@@ -100,23 +103,26 @@ describe("ConfirmResultForm", () => {
         round="group"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={0}
+        defaultAwayScore={0}
         onSubmit={onSubmit}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "1.5");
-    await user.type(screen.getByLabelText(/visitante/i), "0");
+    await user.click(
+      screen.getByRole("button", { name: /sumar a visitante/i }),
+    );
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
 
-    expect(
-      await screen.findByText("El marcador debe ser un número entero"),
-    ).toBeInTheDocument();
-    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const arg = onSubmit.mock.calls[0][0] as ResultInput;
+    expect(arg.homeScore).toBe(0);
+    expect(arg.awayScore).toBe(1);
   });
 
-  it("rejects an empty score and does not call onSubmit", async () => {
+  it("does not go below 0 (Stepper min guard)", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(ok());
     render(
@@ -125,19 +131,20 @@ describe("ConfirmResultForm", () => {
         round="group"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={0}
+        defaultAwayScore={0}
         onSubmit={onSubmit}
       />,
     );
 
-    // Leave both blank, submit. Both fields legitimately surface the message.
+    // The − button is disabled at min=0; clicking it should not decrease the value.
+    await user.click(screen.getByRole("button", { name: /restar a local/i }));
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
 
-    expect(
-      (await screen.findAllByText("Ingresá un número")).length,
-    ).toBeGreaterThan(0);
-    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect((onSubmit.mock.calls[0][0] as ResultInput).homeScore).toBe(0);
   });
 
   it("hides the advancer selector for a group round even on a draw", async () => {
@@ -148,50 +155,49 @@ describe("ConfirmResultForm", () => {
         round="group"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={1}
+        defaultAwayScore={1}
         onSubmit={vi.fn().mockResolvedValue(ok())}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "1");
-    await user.type(screen.getByLabelText(/visitante/i), "1");
+    // Trigger re-render by clicking (values already set via defaults)
+    await user.click(screen.getByRole("button", { name: /sumar a local/i }));
+    await user.click(screen.getByRole("button", { name: /restar a local/i }));
 
     expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
   });
 
   it("hides the advancer selector for a knockout non-draw", async () => {
-    const user = userEvent.setup();
     render(
       <ConfirmResultForm
         matchId="m1"
         round="sf"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={2}
+        defaultAwayScore={1}
         onSubmit={vi.fn().mockResolvedValue(ok())}
       />,
     );
-
-    await user.type(screen.getByLabelText(/local/i), "2");
-    await user.type(screen.getByLabelText(/visitante/i), "1");
 
     expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
   });
 
   it("shows the advancer selector for a knockout draw with both team names", async () => {
-    const user = userEvent.setup();
     render(
       <ConfirmResultForm
         matchId="m1"
         round="sf"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={1}
+        defaultAwayScore={1}
         onSubmit={vi.fn().mockResolvedValue(ok())}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "1");
-    await user.type(screen.getByLabelText(/visitante/i), "1");
-
-    const group = await screen.findByRole("radiogroup");
+    const group = screen.getByRole("radiogroup");
     expect(group).toBeInTheDocument();
     expect(
       screen.getByRole("radio", { name: "Argentina" }),
@@ -199,47 +205,39 @@ describe("ConfirmResultForm", () => {
     expect(screen.getByRole("radio", { name: "Francia" })).toBeInTheDocument();
   });
 
-  it("labels advancer radios with the real team names", async () => {
-    const user = userEvent.setup();
+  it("labels advancer radios with the real team names", () => {
     render(
       <ConfirmResultForm
         matchId="m1"
         round="final"
         homeTeam={{ id: "h", name: "Uruguay" }}
         awayTeam={{ id: "a", name: "Brasil" }}
+        defaultHomeScore={0}
+        defaultAwayScore={0}
         onSubmit={vi.fn().mockResolvedValue(ok())}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "0");
-    await user.type(screen.getByLabelText(/visitante/i), "0");
-
-    expect(
-      await screen.findByRole("radio", { name: "Uruguay" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Uruguay" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Brasil" })).toBeInTheDocument();
   });
 
   it("shows a disabled placeholder hint instead of radios when a knockout slot is null", async () => {
-    const user = userEvent.setup();
     render(
       <ConfirmResultForm
         matchId="m1"
         round="sf"
         homeTeam={homeTeam}
         awayTeam={null}
+        defaultHomeScore={1}
+        defaultAwayScore={1}
         onSubmit={vi.fn().mockResolvedValue(ok())}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "1");
-    await user.type(screen.getByLabelText(/visitante/i), "1");
-
     expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
     expect(
-      await screen.findByText(
-        /equipos.*definidos|definidos|placeholder|por definir/i,
-      ),
+      screen.getByText(/equipos.*definidos|definidos|placeholder|por definir/i),
     ).toBeInTheDocument();
   });
 
@@ -252,12 +250,12 @@ describe("ConfirmResultForm", () => {
         round="group"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={2}
+        defaultAwayScore={0}
         onSubmit={onSubmit}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "2");
-    await user.type(screen.getByLabelText(/visitante/i), "0");
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
@@ -283,12 +281,12 @@ describe("ConfirmResultForm", () => {
         round="sf"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={2}
+        defaultAwayScore={1}
         onSubmit={onSubmit}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "2");
-    await user.type(screen.getByLabelText(/visitante/i), "1");
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
@@ -308,14 +306,13 @@ describe("ConfirmResultForm", () => {
         round="sf"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={1}
+        defaultAwayScore={1}
         onSubmit={onSubmit}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "1");
-    await user.type(screen.getByLabelText(/visitante/i), "1");
-
-    await user.click(await screen.findByRole("radio", { name: "Argentina" }));
+    await user.click(screen.getByRole("radio", { name: "Argentina" }));
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
@@ -337,13 +334,13 @@ describe("ConfirmResultForm", () => {
         round="sf"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={1}
+        defaultAwayScore={1}
         onSubmit={onSubmit}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "1");
-    await user.type(screen.getByLabelText(/visitante/i), "1");
-    await user.click(await screen.findByRole("radio", { name: "Argentina" }));
+    await user.click(screen.getByRole("radio", { name: "Argentina" }));
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
@@ -361,13 +358,13 @@ describe("ConfirmResultForm", () => {
         round="group"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={3}
+        defaultAwayScore={0}
         onSubmit={onSubmit}
         onSuccess={onSuccess}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "3");
-    await user.type(screen.getByLabelText(/visitante/i), "0");
     await user.click(
       screen.getByRole("button", { name: /confirmar resultado/i }),
     );
@@ -390,12 +387,12 @@ describe("ConfirmResultForm", () => {
         round="group"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={1}
+        defaultAwayScore={0}
         onSubmit={onSubmit}
       />,
     );
 
-    await user.type(screen.getByLabelText(/local/i), "1");
-    await user.type(screen.getByLabelText(/visitante/i), "0");
     const button = screen.getByRole("button", {
       name: /confirmar resultado/i,
     });
@@ -416,20 +413,16 @@ describe("ConfirmResultForm", () => {
         round="sf"
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        defaultHomeScore={1}
+        defaultAwayScore={1}
         onSubmit={onSubmit}
       />,
     );
 
-    const home = screen.getByLabelText(/local/i);
-    const away = screen.getByLabelText(/visitante/i);
+    await user.click(screen.getByRole("radio", { name: "Argentina" }));
 
-    await user.type(home, "1");
-    await user.type(away, "1");
-    await user.click(await screen.findByRole("radio", { name: "Argentina" }));
-
-    // Move away from the draw: 1 -> 2 home.
-    await user.clear(home);
-    await user.type(home, "2");
+    // Break the draw: increment home from 1 to 2.
+    await user.click(screen.getByRole("button", { name: /sumar a local/i }));
 
     expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
 
@@ -441,5 +434,23 @@ describe("ConfirmResultForm", () => {
     expect(
       (onSubmit.mock.calls[0][0] as ResultInput).advancerTeamId,
     ).toBeNull();
+  });
+
+  it("initializes with provided default scores", () => {
+    render(
+      <ConfirmResultForm
+        matchId="m1"
+        round="group"
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        defaultHomeScore={3}
+        defaultAwayScore={1}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    // Steppers show their value as text
+    expect(screen.getAllByText("3").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1").length).toBeGreaterThan(0);
   });
 });

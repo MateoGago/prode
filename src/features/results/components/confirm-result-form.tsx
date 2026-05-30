@@ -10,29 +10,16 @@
  * the injected onSubmit Server Action.
  */
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import type React from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import type { Round } from "@/features/fixtures/entities/match";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/shared/ui/form";
-import { Input } from "@/shared/ui/input";
+import { Stepper } from "@/shared/ui/stepper";
 
-import {
-  confirmResultFormSchema,
-  type ConfirmResultFormValues,
-} from "../entities/confirm-result-form-schema";
 import type {
   ConfirmActionResult,
   ResultInput,
@@ -75,47 +62,45 @@ export function ConfirmResultForm({
   round,
   homeTeam,
   awayTeam,
-  defaultHomeScore,
-  defaultAwayScore,
+  defaultHomeScore = 0,
+  defaultAwayScore = 0,
   defaultAdvancerTeamId,
   onSubmit,
   onSuccess,
 }: ConfirmResultFormProps) {
   const [isPending, startTransition] = useTransition();
-
-  const form = useForm<ConfirmResultFormValues>({
-    resolver: zodResolver(confirmResultFormSchema),
-    defaultValues: {
-      homeScore: defaultHomeScore ?? (NaN as unknown as number),
-      awayScore: defaultAwayScore ?? (NaN as unknown as number),
-      advancerTeamId: defaultAdvancerTeamId ?? null,
-    },
-  });
-
-  const homeScore = form.watch("homeScore");
-  const awayScore = form.watch("awayScore");
+  const [homeScore, setHomeScore] = useState<number>(defaultHomeScore);
+  const [awayScore, setAwayScore] = useState<number>(defaultAwayScore);
+  const [advancerTeamId, setAdvancerTeamId] = useState<string | null>(
+    defaultAdvancerTeamId ?? null,
+  );
 
   const isKnockout = round !== "group";
-  const isDraw =
-    Number.isInteger(homeScore) &&
-    Number.isInteger(awayScore) &&
-    homeScore === awayScore;
+  const isDraw = homeScore === awayScore;
   const showAdvancer = isKnockout && isDraw;
   const hasBothTeams = homeTeam !== null && awayTeam !== null;
 
-  function handleSubmit(values: ConfirmResultFormValues) {
-    // When the advancer control is hidden the slot must emit null, exactly as
-    // validateResultInput expects for group / knockout-non-draw.
-    const advancerTeamId = showAdvancer
-      ? (values.advancerTeamId ?? null)
-      : null;
+  function handleHomeChange(next: number) {
+    setHomeScore(next);
+    // Breaking out of a draw state — clear any selected advancer.
+    if (next !== awayScore) setAdvancerTeamId(null);
+  }
 
+  function handleAwayChange(next: number) {
+    setAwayScore(next);
+    if (homeScore !== next) setAdvancerTeamId(null);
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     startTransition(async () => {
       const result = await onSubmit({
         matchId,
-        homeScore: values.homeScore,
-        awayScore: values.awayScore,
-        advancerTeamId,
+        homeScore,
+        awayScore,
+        // When the advancer control is hidden the slot must emit null, exactly
+        // as validateResultInput expects for group / knockout-non-draw.
+        advancerTeamId: showAdvancer ? advancerTeamId : null,
       });
 
       if (result.ok) {
@@ -131,114 +116,88 @@ export function ConfirmResultForm({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Confirmar resultado</CardTitle>
+    <Card className="shadow-card">
+      <CardHeader className="border-b">
+        <CardTitle className="text-base font-semibold">
+          Confirmar resultado
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="grid gap-4"
-            noValidate
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="homeScore"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Local</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        step={1}
-                        {...field}
-                        value={Number.isNaN(field.value) ? "" : field.value}
-                        onChange={(event) =>
-                          field.onChange(event.target.valueAsNumber)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="awayScore"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Visitante</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        step={1}
-                        {...field}
-                        value={Number.isNaN(field.value) ? "" : field.value}
-                        onChange={(event) =>
-                          field.onChange(event.target.valueAsNumber)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <form onSubmit={handleSubmit} className="grid gap-6 pt-4" noValidate>
+          {/* Score steppers row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Local
+              </span>
+              <Stepper
+                value={homeScore}
+                onValueChange={handleHomeChange}
+                label="Local"
+                disabled={isPending}
               />
             </div>
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Visitante
+              </span>
+              <Stepper
+                value={awayScore}
+                onValueChange={handleAwayChange}
+                label="Visitante"
+                disabled={isPending}
+              />
+            </div>
+          </div>
 
-            {showAdvancer ? (
-              hasBothTeams ? (
-                <FormField
-                  control={form.control}
-                  name="advancerTeamId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>¿Qué equipo avanzó?</FormLabel>
-                      <div
-                        role="radiogroup"
-                        aria-label="Equipo que avanzó"
-                        className="grid gap-2"
-                      >
-                        {[homeTeam, awayTeam].map((team) => (
-                          <label
-                            key={team.id}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <input
-                              type="radio"
-                              name={field.name}
-                              value={team.id}
-                              checked={field.value === team.id}
-                              onChange={() => field.onChange(team.id)}
-                            />
-                            {team.name}
-                          </label>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Los equipos aún no están definidos para este cruce.
-                </p>
-              )
+          {/* Advancer selector — knockout draws only */}
+          {showAdvancer ? (
+            hasBothTeams ? (
+              <div className="grid gap-2">
+                <span className="text-sm font-medium">¿Qué equipo avanzó?</span>
+                <div
+                  role="radiogroup"
+                  aria-label="Equipo que avanzó"
+                  className="grid gap-2"
+                >
+                  {[homeTeam, awayTeam].map((team) => (
+                    <label
+                      key={team.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card-muted px-3 py-2 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-soft"
+                    >
+                      <input
+                        type="radio"
+                        name={`advancer-${matchId}`}
+                        value={team.id}
+                        checked={advancerTeamId === team.id}
+                        onChange={() => setAdvancerTeamId(team.id)}
+                        disabled={isPending}
+                      />
+                      {team.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Los equipos aún no están definidos para este cruce.
+              </p>
+            )
+          ) : null}
+
+          <Button
+            type="submit"
+            variant="pop-gol"
+            size="lg"
+            disabled={isPending}
+            className="w-full"
+          >
+            {isPending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : null}
-
-            <Button type="submit" disabled={isPending} className="w-full">
-              {isPending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : null}
-              Confirmar resultado
-            </Button>
-          </form>
-        </Form>
+            Confirmar resultado
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

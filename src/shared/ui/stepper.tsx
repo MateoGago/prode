@@ -80,7 +80,12 @@ export function Stepper({
             initial={{ scale: 0.6, opacity: 0 }}
             animate={{ scale: [1, 1.22, 1], opacity: 1 }}
             exit={{ scale: 0.6, opacity: 0 }}
-            transition={popSpring}
+            // A 3-keyframe bounce can't ride a spring (motion supports only two
+            // keyframes with spring); the scale gets its own tween, opacity keeps the spring.
+            transition={{
+              ...popSpring,
+              scale: { duration: 0.28, ease: "easeOut", times: [0, 0.55, 1] },
+            }}
             className="inline-block"
           >
             {value}

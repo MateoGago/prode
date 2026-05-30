@@ -24,11 +24,14 @@ export default async function AdminPage() {
 
   return (
     <section className="grid gap-6">
-      <header className="grid gap-3">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight">
-          Panel de administración
+      <header className="grid gap-1.5">
+        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          Administración
+        </p>
+        <h1 className="font-heading text-3xl font-bold tracking-tight">
+          Panel de resultados
         </h1>
-        <p className="max-w-prose text-muted-foreground">
+        <p className="max-w-prose text-sm text-muted-foreground">
           Cargá o corregí el resultado final de un partido. Al confirmar se
           recalculan los puntos de todas las predicciones de ese partido.
         </p>
