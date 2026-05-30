@@ -14,6 +14,7 @@
  * come back as `{ ok:false, reason }` while the rest still persist.
  */
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/supabase/server";
 import {
   type BatchSaveInput,
@@ -42,7 +43,7 @@ export async function saveBatchPredictions(
       results: items.map((item) => ({
         matchId: item.matchId,
         ok: false as const,
-        reason: "locked" as const,
+        reason: "unauthenticated" as const,
       })),
     };
   }
@@ -71,6 +72,10 @@ export async function saveBatchPredictions(
     if (upsertError) {
       throw new Error(`upsert predictions failed: ${upsertError.message}`);
     }
+
+    // Only revalidate when something was actually persisted: refresh
+    // server-derived data for other views and the next full navigation/remount.
+    revalidatePath("/predicciones");
   }
 
   return { results };

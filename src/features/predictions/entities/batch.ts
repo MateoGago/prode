@@ -26,7 +26,11 @@ export type BatchResultEntry =
   | {
       matchId: string;
       ok: false;
-      reason: PredictionError | "locked" | "match_not_found";
+      reason:
+        | PredictionError
+        | "locked"
+        | "match_not_found"
+        | "unauthenticated";
     };
 
 /** Result of a batch save: one entry per submitted item, in input order. */
