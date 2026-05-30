@@ -35,6 +35,7 @@ import {
   deriveLock,
   deriveProgress,
   dirtySet,
+  filterPredicate,
   selectBatch,
 } from "@/features/predictions/entities/predictions-board";
 
@@ -74,6 +75,11 @@ interface PredictionsBoardActions {
   setFilter(kind: FilterKind): void;
   /** Scroll the viewport to the group's section anchor. */
   jumpToGroup(label: string): void;
+  /**
+   * Returns the count of matches that match the given filter kind.
+   * Used by FilterSegment to show live counts without re-deriving match lists.
+   */
+  getFilterCount(kind: FilterKind): number;
   /**
    * Persist dirty, non-locked predictions.
    * Stub in Slice 1 — wired to the real Server Action in Slice 4.
@@ -213,6 +219,35 @@ export function PredictionsProvider({
     return selectBatch(workingMap, savedMap, lockSet);
   }
 
+  function getFilterCount(kind: FilterKind): number {
+    let count = 0;
+    for (const group of groups) {
+      for (const match of group.matches) {
+        const lock = deriveLock(
+          {
+            kickoffAt: match.kickoffAt,
+            status: match.status as Parameters<typeof deriveLock>[0]["status"],
+          },
+          now,
+        );
+        if (
+          filterPredicate(
+            kind,
+            match.id,
+            savedMap,
+            workingMap,
+            lock,
+            match.kickoffAt,
+            now,
+          )
+        ) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
   function jumpToGroup(label: string) {
     const el = document.getElementById(label);
     if (el) {
@@ -243,6 +278,7 @@ export function PredictionsProvider({
     getCardState,
     getBatch,
     setFilter,
+    getFilterCount,
     jumpToGroup,
     saveBatch,
   };
