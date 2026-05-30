@@ -18,15 +18,6 @@ function Wordmark() {
   );
 }
 
-function initialsOf(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 /**
  * Protected app shell — the authoritative authorization gate (REQ-AUTH-4).
  *
@@ -59,7 +50,6 @@ export default async function GameLayout({
     (profile?.display_name as string | undefined) ??
     (user.user_metadata?.display_name as string | undefined) ??
     "Jugador";
-  const initials = initialsOf(displayName) || "JG";
 
   const predictionsProgress = await getPredictionsProgress(user.id);
 
@@ -76,12 +66,6 @@ export default async function GameLayout({
         />
         <div className="mt-auto grid gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2.5 px-1">
-            <span
-              aria-hidden="true"
-              className="flex size-9 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary"
-            >
-              {initials}
-            </span>
             <span className="truncate text-sm font-medium">{displayName}</span>
           </div>
           <SignOutButton />
@@ -91,15 +75,7 @@ export default async function GameLayout({
       {/* Mobile: slim sticky top header. */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl md:hidden">
         <Wordmark />
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary"
-          >
-            {initials}
-          </span>
-          <SignOutButton />
-        </div>
+        <SignOutButton />
       </header>
 
       <div className="flex min-w-0 flex-1 flex-col">
