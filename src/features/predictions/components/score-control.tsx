@@ -10,6 +10,12 @@ export type ScoreControlProps = {
   teamName: string;
   /** Kept for backwards-compat with callers/tests; the Stepper owns its own a11y. */
   scoreId?: string;
+  /**
+   * Empty (sin-cargar) state: render a muted "–" placeholder instead of the
+   * numeric value and force-disable the decrement button (REQ-02). The "+" tap
+   * still activates the card by incrementing from the default 0.
+   */
+  empty?: boolean;
 };
 
 /**
@@ -17,6 +23,10 @@ export type ScoreControlProps = {
  * Cancha Pop <Stepper>. The public increment/decrement API is preserved so
  * MatchCard (which owns the score normalization) and tests don't change — we
  * just translate the Stepper's value-delta back into the direction callbacks.
+ *
+ * When `empty` is set the Stepper shows a "–" placeholder and its decrement is
+ * disabled (can't go below "nothing"); the "+" tap fires onIncrement which the
+ * card maps to {home:1,away:0} — REQ-02 activation.
  */
 export function ScoreControl({
   value,
@@ -24,12 +34,15 @@ export function ScoreControl({
   onDecrement,
   onIncrement,
   teamName,
+  empty = false,
 }: ScoreControlProps) {
   return (
     <Stepper
       value={value}
       disabled={disabled}
       label={`Goles de ${teamName}`}
+      placeholder={empty ? "–" : undefined}
+      decrementDisabled={empty}
       onValueChange={(next) => {
         if (next > value) onIncrement();
         else if (next < value) onDecrement();
