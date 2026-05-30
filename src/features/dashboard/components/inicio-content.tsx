@@ -34,6 +34,9 @@ export interface InicioContentProps {
   points: number;
   played: number;
   totalMatches: number;
+  /** Group-stage load progress ("X/72 cargadas") — shared with the nav badge. */
+  predictionsLoaded: number;
+  predictionsTotal: number;
   nextMatch: NextMatchView | null;
   lastResults: LastResultRow[];
 }
@@ -213,6 +216,8 @@ export function InicioContent({
   points,
   played,
   totalMatches,
+  predictionsLoaded,
+  predictionsTotal,
   nextMatch,
   lastResults,
 }: InicioContentProps) {
@@ -250,7 +255,10 @@ export function InicioContent({
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-start">
         {/* Left column on lg: stats + próximo partido */}
         <div className="grid gap-6">
-          <motion.div variants={rise} className="grid grid-cols-3 gap-3">
+          <motion.div
+            variants={rise}
+            className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+          >
             <StatCard
               label="Posición"
               value={position === null ? "—" : `#${position}`}
@@ -261,6 +269,11 @@ export function InicioContent({
               label="Jugados"
               value={String(played)}
               suffix={totalMatches > 0 ? `/${totalMatches}` : undefined}
+            />
+            <StatCard
+              label="Cargadas"
+              value={String(predictionsLoaded)}
+              suffix={predictionsTotal > 0 ? `/${predictionsTotal}` : undefined}
             />
           </motion.div>
 
