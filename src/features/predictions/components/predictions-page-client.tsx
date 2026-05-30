@@ -2,27 +2,31 @@
 
 import { useMemo, useState } from "react";
 
-import type { Match } from "@/features/fixtures/entities/match";
 import { savePrediction } from "@/features/predictions/actions/save-prediction";
 import type {
   PredictionError,
   PredictionInput,
 } from "@/features/predictions/entities/prediction";
+import type { GroupBlock } from "@/features/predictions/entities/predictions-page";
 
 import { GroupSection } from "./group-section";
-
-export type GroupBlock = {
-  groupLabel: string;
-  matches: Match[];
-};
 
 export type PredictionsPageClientProps = {
   userId: string;
   groups: GroupBlock[];
-  initialPredictionsByMatchId: Record<string, PredictionInput | null>;
+  initialPredictionsByMatchId: Record<string, PredictionInput>;
 };
 
 type MatchError = PredictionError | "locked" | null;
+
+function isEmptyDraw(prediction: PredictionInput | null): boolean {
+  if (!prediction) return true;
+  return (
+    prediction.homeScore === 0 &&
+    prediction.awayScore === 0 &&
+    prediction.advancerTeamId === null
+  );
+}
 
 export function PredictionsPageClient({
   userId,
@@ -33,6 +37,9 @@ export function PredictionsPageClient({
     Record<string, PredictionInput | null>
   >(initialPredictionsByMatchId);
   const [savingMatchIds, setSavingMatchIds] = useState<Set<string>>(new Set());
+  const [touchedMatchIds, setTouchedMatchIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [errorsByMatchId, setErrorsByMatchId] = useState<
     Record<string, MatchError>
   >({});
@@ -44,7 +51,7 @@ export function PredictionsPageClient({
 
     for (const group of groups) {
       for (const match of group.matches) {
-        if (new Date(match.kickoffAt).getTime() <= now) {
+        if (match.kickoffAt.getTime() <= now) {
           locked.add(match.id);
         }
       }
@@ -58,6 +65,7 @@ export function PredictionsPageClient({
       ...current,
       [matchId]: next,
     }));
+    setTouchedMatchIds((current) => new Set(current).add(matchId));
     setErrorsByMatchId((current) => ({
       ...current,
       [matchId]: null,
@@ -71,6 +79,20 @@ export function PredictionsPageClient({
       awayScore: 0,
       advancerTeamId: null,
     };
+
+    // Guard against a phantom 0-0: if the user never touched this match and had
+    // no saved prediction, confirm before persisting a draw they may not mean.
+    const neverSaved = initialPredictionsByMatchId[matchId] === undefined;
+    if (
+      !touchedMatchIds.has(matchId) &&
+      neverSaved &&
+      isEmptyDraw(prediction)
+    ) {
+      const confirmed = window.confirm(
+        "Vas a guardar un 0 a 0 sin haber tocado el marcador. ¿Lo guardás igual?",
+      );
+      if (!confirmed) return;
+    }
 
     setGeneralError(null);
     setSavingMatchIds((current) => new Set(current).add(matchId));
