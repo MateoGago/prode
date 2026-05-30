@@ -90,7 +90,7 @@ export function AuthForm() {
     <div className="grid gap-5">
       <Button
         type="button"
-        variant="outline"
+        variant="pop-ghost"
         onClick={onGoogle}
         disabled={isGooglePending}
         className="h-11 w-full gap-2.5 text-sm font-medium"
@@ -161,6 +161,7 @@ export function AuthForm() {
               />
               <Button
                 type="submit"
+                variant="pop"
                 disabled={loginForm.formState.isSubmitting}
                 className={submitClass}
               >
@@ -238,6 +239,7 @@ export function AuthForm() {
               />
               <Button
                 type="submit"
+                variant="pop"
                 disabled={signupForm.formState.isSubmitting}
                 className={submitClass}
               >

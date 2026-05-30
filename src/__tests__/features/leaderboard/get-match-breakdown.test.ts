@@ -80,6 +80,8 @@ describe("getMatchBreakdown", () => {
       actualHomeScore: 2,
       actualAwayScore: 1,
       pointsAwarded: 3,
+      hitType: "exact",
+      multiplier: 1,
     });
   });
 

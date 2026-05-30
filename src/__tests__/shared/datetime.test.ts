@@ -5,7 +5,11 @@
  * All test cases verify the UTC-3 offset behaviour directly.
  */
 import { describe, expect, it } from "vitest";
-import { formatAR } from "@/shared/datetime";
+import {
+  formatAR,
+  formatCountdown,
+  formatKickoffLong,
+} from "@/shared/datetime";
 
 describe("formatAR", () => {
   it("converts a 19:00 UTC kickoff to 16:00 Argentina time", () => {
@@ -40,5 +44,56 @@ describe("formatAR", () => {
     // 23:00 UTC - 3h = 20:00 same day UTC-3 on Jan 1 2027... wait:
     // 2026-12-31T23:00Z - 3h = 2026-12-31T20:00 ART → still Dec 31
     expect(formatAR(utc)).toBe("31/12/2026 20:00");
+  });
+});
+
+describe("formatCountdown", () => {
+  const MINUTE = 60_000;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+
+  it("returns 'Cerrado' when the deadline has passed", () => {
+    expect(formatCountdown(0)).toBe("Cerrado");
+    expect(formatCountdown(-1)).toBe("Cerrado");
+    expect(formatCountdown(-5 * HOUR)).toBe("Cerrado");
+  });
+
+  it("shows whole days when a day or more remains", () => {
+    expect(formatCountdown(DAY)).toBe("1d");
+    expect(formatCountdown(2 * DAY + 5 * HOUR)).toBe("2d");
+  });
+
+  it("shows hours and minutes when under a day", () => {
+    expect(formatCountdown(2 * HOUR + 14 * MINUTE)).toBe("2h 14m");
+    expect(formatCountdown(HOUR)).toBe("1h 0m");
+  });
+
+  it("shows only minutes when under an hour", () => {
+    expect(formatCountdown(14 * MINUTE)).toBe("14m");
+    expect(formatCountdown(MINUTE)).toBe("1m");
+  });
+
+  it("rounds sub-minute remainders up to '1m' so it never shows 0m while open", () => {
+    expect(formatCountdown(30_000)).toBe("1m");
+    expect(formatCountdown(1)).toBe("1m");
+  });
+
+  it("floors minutes within the hours+minutes range", () => {
+    // 1h 14m 59s → 1h 14m (seconds dropped)
+    expect(formatCountdown(HOUR + 14 * MINUTE + 59_000)).toBe("1h 14m");
+  });
+});
+
+describe("formatKickoffLong", () => {
+  it("renders a short AR weekday + dd/M · HH:mm lock line", () => {
+    // 2026-06-13 is a Saturday; 19:00 UTC → 16:00 ART
+    expect(formatKickoffLong(new Date("2026-06-13T19:00:00Z"))).toBe(
+      "Sáb 13/6 · 16:00",
+    );
+  });
+
+  it("accepts an ISO string and drops leading zeros from the day/month", () => {
+    // 2026-06-01 is a Monday; 12:00 UTC → 09:00 ART
+    expect(formatKickoffLong("2026-06-01T12:00:00Z")).toBe("Lun 1/6 · 09:00");
   });
 });

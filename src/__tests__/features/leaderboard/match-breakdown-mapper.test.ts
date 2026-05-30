@@ -34,6 +34,9 @@ describe("mapMatchBreakdown", () => {
         actualHomeScore: 3,
         actualAwayScore: 0,
         pointsAwarded: 3,
+        // predicted home win (2-1), actual home win (3-0) → same outcome but different scores
+        hitType: "winner",
+        multiplier: 1,
       },
     ]);
   });
