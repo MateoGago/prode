@@ -27,6 +27,18 @@ describe("TeamFlag", () => {
     expect(placeholder?.className).toContain("size-[30px]");
   });
 
+  it("renders the image as a perfect circle at default 30px (no ellipse)", () => {
+    render(
+      <TeamFlag name="Argentina" flagUrl="https://flags.example.com/ar.png" />,
+    );
+    const img = screen.getByRole("img") as HTMLImageElement;
+    // Must have explicit square sizing via class so Tailwind preflight
+    // `img { height: auto }` cannot override the height attribute.
+    expect(img.className).toContain("size-[30px]");
+    expect(img.className).toContain("object-cover");
+    expect(img.className).toContain("rounded-full");
+  });
+
   it("applies a custom numeric size as inline style on placeholder", () => {
     render(<TeamFlag name="Brasil" flagUrl={null} size={40} />);
     const placeholder = document.querySelector(

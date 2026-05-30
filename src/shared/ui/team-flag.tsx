@@ -13,8 +13,10 @@ export type TeamFlagProps = {
 
 const DEFAULT_SIZE = 30;
 
+// size-[30px] is explicit so Tailwind preflight `img { height: auto }` cannot
+// override the height and turn circles into ellipses.
 const DEFAULT_IMAGE_CLASS =
-  "shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-border";
+  "size-[30px] shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-border";
 
 const DEFAULT_PLACEHOLDER_CLASS_30 =
   "size-[30px] shrink-0 rounded-full border border-dashed border-border bg-card-muted";

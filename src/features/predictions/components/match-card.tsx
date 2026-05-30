@@ -71,7 +71,11 @@ function normalizeScore(value: number) {
   return Math.max(0, Math.trunc(value));
 }
 
-function TeamRow({
+/**
+ * Single team column in the vertical two-column scoreboard layout.
+ * flag → name → stepper, all center-aligned.
+ */
+function TeamColumn({
   name,
   flagUrl,
   score,
@@ -89,12 +93,11 @@ function TeamRow({
   scoreId: string;
 }) {
   return (
-    <div className="flex items-center gap-3 py-1.5">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <TeamFlag name={name} flagUrl={flagUrl} />
-        <span className="truncate text-[15px] font-semibold">{name}</span>
-      </div>
-
+    <div className="flex flex-1 flex-col items-center gap-2 px-1">
+      <TeamFlag name={name} flagUrl={flagUrl} />
+      <span className="line-clamp-2 text-center text-[13px] font-semibold leading-tight">
+        {name}
+      </span>
       <ScoreControl
         value={score}
         disabled={controlsDisabled}
@@ -289,24 +292,29 @@ export function MatchCard({
 
       {state === "confirmed" ? (
         <>
-          <div className="flex items-center gap-3 py-1.5">
-            <TeamFlag
-              name={homeName}
-              flagUrl={match.homeTeam?.flagUrl ?? null}
-            />
-            <span className="truncate text-[15px] font-semibold">
-              {homeName}
+          {/* Two-column flag → name header, same structure as editable states */}
+          <div className="flex items-center gap-2 py-1">
+            <div className="flex flex-1 flex-col items-center gap-1.5 px-1">
+              <TeamFlag
+                name={homeName}
+                flagUrl={match.homeTeam?.flagUrl ?? null}
+              />
+              <span className="line-clamp-2 text-center text-[13px] font-semibold leading-tight">
+                {homeName}
+              </span>
+            </div>
+            <span className="font-mono text-base font-bold text-muted-foreground">
+              :
             </span>
-          </div>
-          <div className="my-1.5 h-px bg-border/60" />
-          <div className="flex items-center gap-3 py-1.5">
-            <TeamFlag
-              name={awayName}
-              flagUrl={match.awayTeam?.flagUrl ?? null}
-            />
-            <span className="truncate text-[15px] font-semibold">
-              {awayName}
-            </span>
+            <div className="flex flex-1 flex-col items-center gap-1.5 px-1">
+              <TeamFlag
+                name={awayName}
+                flagUrl={match.awayTeam?.flagUrl ?? null}
+              />
+              <span className="line-clamp-2 text-center text-[13px] font-semibold leading-tight">
+                {awayName}
+              </span>
+            </div>
           </div>
           {prediction ? (
             <ConfirmedPanel
@@ -322,31 +330,32 @@ export function MatchCard({
         </>
       ) : (
         <>
-          <TeamRow
-            name={homeName}
-            flagUrl={match.homeTeam?.flagUrl ?? null}
-            score={homeScore}
-            controlsDisabled={controlsDisabled}
-            scoreId={homeScoreId}
-            onDecrement={() => setHomeScore(homeScore - 1)}
-            onIncrement={() => setHomeScore(homeScore + 1)}
-          />
+          {/* Vertical two-column scoreboard: home | ":" | away */}
+          <div className="flex items-center gap-2 py-1">
+            <TeamColumn
+              name={homeName}
+              flagUrl={match.homeTeam?.flagUrl ?? null}
+              score={homeScore}
+              controlsDisabled={controlsDisabled}
+              scoreId={homeScoreId}
+              onDecrement={() => setHomeScore(homeScore - 1)}
+              onIncrement={() => setHomeScore(homeScore + 1)}
+            />
 
-          <div className="my-0.5 flex items-center justify-center">
-            <span className="font-heading text-xs font-bold tracking-wider text-muted-foreground">
-              VS
+            <span className="font-mono text-base font-bold text-muted-foreground">
+              :
             </span>
-          </div>
 
-          <TeamRow
-            name={awayName}
-            flagUrl={match.awayTeam?.flagUrl ?? null}
-            score={awayScore}
-            controlsDisabled={controlsDisabled}
-            scoreId={awayScoreId}
-            onDecrement={() => setAwayScore(awayScore - 1)}
-            onIncrement={() => setAwayScore(awayScore + 1)}
-          />
+            <TeamColumn
+              name={awayName}
+              flagUrl={match.awayTeam?.flagUrl ?? null}
+              score={awayScore}
+              controlsDisabled={controlsDisabled}
+              scoreId={awayScoreId}
+              onDecrement={() => setAwayScore(awayScore - 1)}
+              onIncrement={() => setAwayScore(awayScore + 1)}
+            />
+          </div>
 
           {showAdvancer && advancerOptions.length === 2 ? (
             <AdvancerPicker
@@ -365,14 +374,16 @@ export function MatchCard({
 
           <div className="mt-3.5 flex items-center gap-2.5">
             {state === "locked" || state === "live" ? (
-              <span className="text-[13px] font-semibold text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-card-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_0_0_1.5px_var(--border)]">
+                <span className="size-[7px] rounded-full bg-muted-foreground/50" />
                 {state === "live"
-                  ? "🔴 En juego — predicción cerrada"
-                  : "🔒 Este partido ya empezó"}
+                  ? "En juego — cerrado"
+                  : "Este partido ya empezó"}
               </span>
             ) : (
-              <span className="text-[13px] font-medium text-muted-foreground">
-                💾 Sin guardar
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-card-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_0_0_1.5px_var(--border)]">
+                <span className="size-[7px] rounded-full bg-warn" />
+                Sin guardar
               </span>
             )}
 
