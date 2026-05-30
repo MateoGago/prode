@@ -26,8 +26,8 @@ export function BatchBar() {
   if (count === 0) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4rem)] z-40 border-t border-border bg-card/95 px-4 pt-3 pb-3 backdrop-blur md:bottom-0 md:z-30 md:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-      <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4rem)] z-40 border-t border-border bg-card/95 px-5 pt-3 pb-3 backdrop-blur md:bottom-0 md:z-30 md:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+      <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
         <span className="text-sm text-muted-foreground">
           {count === 1
             ? "1 cambio sin guardar"
