@@ -1,0 +1,61 @@
+import { resolveActiveGroup } from "@/features/groups/actions/resolve-active-group";
+import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
+import { LeaderboardTable } from "@/features/leaderboard";
+import { createClient } from "@/shared/supabase/server";
+
+/**
+ * Group-scoped leaderboard page — /g/[code]/leaderboard (T-17, REQ-04, REQ-06).
+ *
+ * resolveActiveGroup is also called by the parent layout, but RSC renders
+ * each segment independently. The Supabase client is shared per-request so the
+ * DB round-trips are deduplicated in practice. The membership gate is
+ * authoritative in the layout; calling it here again is belt-and-suspenders for
+ * the groupId — do NOT skip it in case this page is ever co-located differently.
+ *
+ * Player name links point to /g/{code}/tabla/{userId} (REQ-05 co-member gate).
+ */
+export default async function GroupLeaderboardPage({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  const { code } = await params;
+
+  const { groupId, group } = await resolveActiveGroup(code);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const rows = await getLeaderboard(groupId);
+
+  // Attach breakdown hrefs so player names are clickable (REQ-05).
+  const rowsWithHrefs = rows.map((row) => ({
+    ...row,
+    href: `/g/${code}/tabla/${row.playerId}`,
+  }));
+
+  return (
+    <section className="grid gap-6">
+      <header className="grid gap-1">
+        <h1
+          className={
+            "font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight"
+          }
+        >
+          {group.name}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Tabla de posiciones del grupo.
+        </p>
+      </header>
+
+      <LeaderboardTable
+        rows={rowsWithHrefs}
+        highlightPlayerId={user?.id}
+        emptyMessage="Todavía no hay puntos en este grupo."
+      />
+    </section>
+  );
+}
