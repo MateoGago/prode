@@ -6,11 +6,11 @@ import { createClient } from "@/shared/supabase/server";
 /**
  * Group-scoped leaderboard page — /g/[code]/leaderboard (T-17, REQ-04, REQ-06).
  *
- * resolveActiveGroup is also called by the parent layout, but RSC renders
- * each segment independently. The Supabase client is shared per-request so the
- * DB round-trips are deduplicated in practice. The membership gate is
- * authoritative in the layout; calling it here again is belt-and-suspenders for
- * the groupId — do NOT skip it in case this page is ever co-located differently.
+ * resolveActiveGroup is also called by the parent layout, but the function is
+ * wrapped with React.cache() so the DB round-trips are deduplicated per request.
+ * The membership gate is authoritative in the layout; calling it here again is
+ * belt-and-suspenders for the groupId — do NOT skip it in case this page is
+ * ever co-located differently.
  *
  * Player name links point to /g/{code}/tabla/{userId} (REQ-05 co-member gate).
  */
@@ -24,11 +24,12 @@ export default async function GroupLeaderboardPage({
   const { groupId, group } = await resolveActiveGroup(code);
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const rows = await getLeaderboard(groupId);
+  const [rows, { data: authData }] = await Promise.all([
+    getLeaderboard(groupId),
+    supabase.auth.getUser(),
+  ]);
+  const user = authData.user;
 
   // Attach breakdown hrefs so player names are clickable (REQ-05).
   const rowsWithHrefs = rows.map((row) => ({
