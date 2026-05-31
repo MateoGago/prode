@@ -274,6 +274,17 @@
   padding-inline: 1rem;
 }
 
+/*
+ * While the predictions board has unsaved edits, its floating save drawer
+ * (BatchBar, marked [data-save-drawer]) takes over the bottom of the screen —
+ * hide the mobile tab bar ([data-app-tab-bar]) so the two never stack. Purely
+ * declarative: the drawer renders only when there is something to save, so the
+ * tab bar reappears the moment edits are saved or discarded.
+ */
+body:has([data-save-drawer]) [data-app-tab-bar] {
+  display: none;
+}
+
 @keyframes rise {
   from {
     opacity: 0;
