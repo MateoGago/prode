@@ -272,10 +272,13 @@ export function InicioContent({
 
         {/* Right column on lg: últimos resultados */}
         <motion.div variants={rise} className="grid gap-3">
-          <SectionHeader
-            title="Últimos resultados"
-            action={{ href: "/tabla", label: "Ver tabla" }}
-          />
+          {/*
+           * "Ver tabla" previously linked to /tabla which now redirects to
+           * /onboarding. The leaderboard lives per-group at
+           * /g/{code}/leaderboard; this hub has no single active-group context,
+           * so the CTA is removed rather than pointing to a dead end.
+           */}
+          <SectionHeader title="Últimos resultados" />
           {lastResults.length > 0 ? (
             <div className="grid gap-2.5">
               {lastResults.map((row) => (
