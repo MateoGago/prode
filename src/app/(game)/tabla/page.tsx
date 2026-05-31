@@ -1,24 +1,9 @@
-import { getLeaderboard, LeaderboardTable } from "@/features/leaderboard";
-import { createClient } from "@/shared/supabase/server";
+// TODO(prode-groups PR3): redirect to /g/{code}/leaderboard or /onboarding
+// once group routes are live. This page is temporarily stubbed because the
+// global no-arg get_leaderboard() was dropped in the groups migration.
+// Do NOT call getLeaderboard() here — it now requires a groupId.
 
-export default async function TablaPage() {
-  const supabase = await createClient();
-
-  // Independent reads — fetch in parallel to avoid a request waterfall.
-  const [
-    {
-      data: { user },
-    },
-    rows,
-  ] = await Promise.all([supabase.auth.getUser(), getLeaderboard()]);
-
-  // Precompute each player's href on the server — functions can't cross the
-  // RSC boundary into the client LeaderboardTable.
-  const rowsWithHref = rows.map((row) => ({
-    ...row,
-    href: `/tabla/${row.playerId}`,
-  }));
-
+export default function TablaPage() {
   return (
     <section className="grid gap-6">
       <div className="grid gap-1">
@@ -26,15 +11,9 @@ export default async function TablaPage() {
           Tabla de posiciones
         </h1>
         <p className="text-sm text-muted-foreground">
-          Ranking acumulado de todos los jugadores.
+          Seleccioná un grupo para ver la tabla de posiciones.
         </p>
       </div>
-
-      <LeaderboardTable
-        rows={rowsWithHref}
-        highlightPlayerId={user?.id}
-        emptyMessage="Todavía no hay puntos cargados."
-      />
     </section>
   );
 }

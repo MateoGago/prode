@@ -47,12 +47,14 @@ export default async function HomePage() {
         }
       : null;
 
+  // TODO(prode-groups PR4): derive position/points from listMyGroups()
+  // once the home hub is wired. Global stats removed (no global leaderboard).
   return (
     <InicioContent
       displayName={displayName}
       subline={subline}
-      position={dashboard.stats.position}
-      points={dashboard.stats.points}
+      position={null}
+      points={0}
       played={dashboard.played}
       totalMatches={dashboard.totalMatches}
       predictionsLoaded={dashboard.predictionsProgress.loaded}

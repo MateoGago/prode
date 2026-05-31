@@ -1,4 +1,4 @@
-import { getLeaderboard, getMatchBreakdown } from "@/features/leaderboard";
+import { getMatchBreakdown } from "@/features/leaderboard";
 import { getPredictionsProgress } from "@/features/predictions";
 import type { PredictionProgress } from "@/features/predictions";
 import {
@@ -9,17 +9,15 @@ import { createClient } from "@/shared/supabase/server";
 
 import {
   countPendingPredictions,
-  derivePlayerStats,
   mapLastResults,
   selectNextMatch,
   type LastResultRow,
-  type PlayerStats,
 } from "../entities/inicio";
 import type { Match } from "@/features/fixtures/entities/match";
 
 export interface DashboardData {
-  stats: PlayerStats;
-  /** Total fixtures in the tournament — denominator for "jugados N/total". */
+  // TODO(prode-groups PR4): home hub — replace with per-group stats from
+  // listMyGroups(). Global position/points removed (no global leaderboard).
   totalMatches: number;
   /** Confirmed predictions the player has scored — "jugados" numerator. */
   played: number;
@@ -45,17 +43,12 @@ export async function getDashboard(
   const supabase = await createClient();
 
   // Independent reads — run in parallel to avoid a request waterfall.
-  const [
-    matchesResult,
-    predictionsResult,
-    leaderboard,
-    breakdown,
-    predictionsProgress,
-  ] = await Promise.all([
-    supabase
-      .from("matches")
-      .select(
-        `
+  const [matchesResult, predictionsResult, breakdown, predictionsProgress] =
+    await Promise.all([
+      supabase
+        .from("matches")
+        .select(
+          `
           id, external_ref, round, multiplier, matchday,
           home_placeholder, away_placeholder, kickoff_at, status,
           home_score, away_score, result_confirmed_at,
@@ -66,13 +59,12 @@ export async function getDashboard(
             id, external_ref, name, group_label, flag_url
           )
         `,
-      )
-      .order("kickoff_at", { ascending: true }),
-    supabase.from("predictions").select("match_id").eq("user_id", userId),
-    getLeaderboard(),
-    getMatchBreakdown(userId),
-    getPredictionsProgress(userId),
-  ]);
+        )
+        .order("kickoff_at", { ascending: true }),
+      supabase.from("predictions").select("match_id").eq("user_id", userId),
+      getMatchBreakdown(userId),
+      getPredictionsProgress(userId),
+    ]);
 
   if (matchesResult.error) {
     throw new Error(`load matches failed: ${matchesResult.error.message}`);
@@ -93,7 +85,6 @@ export async function getDashboard(
   );
 
   return {
-    stats: derivePlayerStats(leaderboard, userId),
     totalMatches: matches.length,
     played: breakdown.length,
     predictionsProgress,
