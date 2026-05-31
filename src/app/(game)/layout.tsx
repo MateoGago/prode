@@ -53,6 +53,19 @@ export default async function GameLayout({
 
   const predictionsProgress = await getPredictionsProgress(user.id);
 
+  // Resolve the "Tabla" nav target to the user's first group leaderboard so the
+  // item links straight there (no /onboarding redirect hop). RLS scopes the
+  // query to groups the user belongs to. Falls back to /onboarding if none.
+  const { data: firstGroup } = await supabase
+    .from("groups")
+    .select("invite_code")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const tablaHref = firstGroup?.invite_code
+    ? `/g/${firstGroup.invite_code}/leaderboard`
+    : "/onboarding";
+
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
       {/* Desktop: persistent left sidebar. */}
@@ -62,6 +75,7 @@ export default async function GameLayout({
         </div>
         <AppSidebarNav
           isAdmin={isAdmin}
+          tablaHref={tablaHref}
           predictionsProgress={predictionsProgress}
         />
         <div className="mt-auto grid gap-3 border-t border-border pt-4">
@@ -85,7 +99,11 @@ export default async function GameLayout({
         </main>
       </div>
 
-      <AppTabBar isAdmin={isAdmin} predictionsProgress={predictionsProgress} />
+      <AppTabBar
+        isAdmin={isAdmin}
+        tablaHref={tablaHref}
+        predictionsProgress={predictionsProgress}
+      />
     </div>
   );
 }

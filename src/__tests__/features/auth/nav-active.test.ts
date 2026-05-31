@@ -31,21 +31,32 @@ describe("isNavItemActive", () => {
     expect(isNavItemActive("/admin", "/")).toBe(false);
   });
 
-  // T-21: group-scoped /g/* routes must keep the Tabla nav item lit.
-  // The Tabla nav href changed to /onboarding (entry-point redirect); the
-  // isNavItemActive function has a special case for /g/*/leaderboard and
-  // /g/*/tabla/* so the tab stays highlighted inside a group view.
-  describe("group-scoped /g/[code] routes", () => {
-    it("lights Tabla (/onboarding href) on /g/[code]/leaderboard", () => {
-      expect(isNavItemActive("/g/ABCD1234/leaderboard", "/onboarding")).toBe(
+  // The Tabla item now links straight at the active group leaderboard and opts
+  // into group-route matching (3rd arg), so it stays lit across any group view
+  // and on the /onboarding fallback — regardless of its concrete href.
+  describe("group-scoped /g/[code] routes (matchGroupRoutes)", () => {
+    const TABLA_HREF = "/g/EZ7SE6R3/leaderboard";
+
+    it("lights Tabla on the same group's leaderboard", () => {
+      expect(isNavItemActive("/g/EZ7SE6R3/leaderboard", TABLA_HREF, true)).toBe(
         true,
       );
     });
 
-    it("lights Tabla (/onboarding href) on /g/[code]/tabla/[userId]", () => {
+    it("lights Tabla on a different group's leaderboard", () => {
+      expect(isNavItemActive("/g/ABCD1234/leaderboard", TABLA_HREF, true)).toBe(
+        true,
+      );
+    });
+
+    it("lights Tabla on /g/[code]/tabla/[userId]", () => {
       expect(
-        isNavItemActive("/g/ABCD1234/tabla/some-uuid", "/onboarding"),
+        isNavItemActive("/g/ABCD1234/tabla/some-uuid", TABLA_HREF, true),
       ).toBe(true);
+    });
+
+    it("lights Tabla on the /onboarding fallback href", () => {
+      expect(isNavItemActive("/onboarding", "/onboarding", true)).toBe(true);
     });
 
     it("does NOT light Inicio on /g/[code]/leaderboard", () => {

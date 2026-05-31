@@ -32,9 +32,9 @@ describe("OnboardingContent", () => {
   it("renders the main heading", () => {
     render(<OnboardingContent />);
 
-    expect(
-      screen.getByRole("heading", { name: /grupos/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /prode/i,
+    );
   });
 
   it("renders Crear and Unirse tabs", () => {
