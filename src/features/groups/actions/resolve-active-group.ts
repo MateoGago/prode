@@ -11,8 +11,12 @@
  *
  * Import restriction: do NOT add 'use server' — this is a server module
  * called by layouts, not a client-callable action endpoint.
+ *
+ * Wrapped with React.cache() so multiple RSC segments in the same request
+ * (layout + leaderboard page + tabla page) share a single DB round-trip.
  */
 
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/shared/supabase/server";
 import type { Group } from "../entities/membership";
@@ -22,7 +26,7 @@ export interface ActiveGroupContext {
   group: Group;
 }
 
-export async function resolveActiveGroup(
+export const resolveActiveGroup = cache(async function resolveActiveGroup(
   code: string,
 ): Promise<ActiveGroupContext> {
   const supabase = await createClient();
@@ -72,4 +76,4 @@ export async function resolveActiveGroup(
   };
 
   return { groupId: row.id, group };
-}
+});
