@@ -5,6 +5,8 @@ import {
   InicioContent,
   type NextMatchView,
 } from "@/features/dashboard/components/inicio-content";
+import { listMyGroups } from "@/features/groups/actions/list-my-groups";
+import { GroupCard } from "@/features/groups/components/group-card";
 import { formatKickoffLong } from "@/shared/datetime";
 import { createClient } from "@/shared/supabase/server";
 
@@ -16,6 +18,10 @@ export default async function HomePage() {
 
   if (!user) redirect("/login");
 
+  // If user has no groups, force them into onboarding (REQ-07, decision B).
+  const groups = await listMyGroups();
+  if (groups.length === 0) redirect("/onboarding");
+
   const displayName =
     (user.user_metadata?.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
@@ -23,9 +29,6 @@ export default async function HomePage() {
 
   const dashboard = await getDashboard(user.id);
 
-  // Honesty rule: the proof's "racha 🔥" (streak) has no data model, so it's
-  // dropped in favour of a real, computed nudge — how many open matches the
-  // player still hasn't predicted.
   const subline =
     dashboard.pendingPredictions > 0
       ? `Te faltan ${dashboard.pendingPredictions} ${
@@ -33,8 +36,6 @@ export default async function HomePage() {
         } para la fecha`
       : "Estás al día con tus pronósticos 💪";
 
-  // Map the domain Match (Date, Team) into a plain, RSC-serializable view so no
-  // class instances or functions cross the client boundary.
   const next = dashboard.nextMatch;
   const nextMatch: NextMatchView | null =
     next?.homeTeam && next.awayTeam
@@ -47,20 +48,39 @@ export default async function HomePage() {
         }
       : null;
 
-  // TODO(prode-groups PR4): derive position/points from listMyGroups()
-  // once the home hub is wired. Global stats removed (no global leaderboard).
   return (
-    <InicioContent
-      displayName={displayName}
-      subline={subline}
-      position={null}
-      points={0}
-      played={dashboard.played}
-      totalMatches={dashboard.totalMatches}
-      predictionsLoaded={dashboard.predictionsProgress.loaded}
-      predictionsTotal={dashboard.predictionsProgress.total}
-      nextMatch={nextMatch}
-      lastResults={dashboard.lastResults}
-    />
+    <>
+      {/* Per-group cards — position and points are group-scoped (decision B) */}
+      <section className="grid gap-3">
+        <h2 className="font-heading text-[17px] font-bold tracking-tight">
+          {groups.length === 1 ? "Tu grupo" : "Tus grupos"}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {groups.map((group) => (
+            <GroupCard
+              key={group.groupId}
+              groupName={group.name}
+              position={group.position}
+              points={group.points}
+              leaderboardHref={`/g/${group.inviteCode}/leaderboard`}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Rest of the dashboard — próximo partido, cargadas, últimos resultados */}
+      <InicioContent
+        displayName={displayName}
+        subline={subline}
+        position={null}
+        points={0}
+        played={dashboard.played}
+        totalMatches={dashboard.totalMatches}
+        predictionsLoaded={dashboard.predictionsProgress.loaded}
+        predictionsTotal={dashboard.predictionsProgress.total}
+        nextMatch={nextMatch}
+        lastResults={dashboard.lastResults}
+      />
+    </>
   );
 }

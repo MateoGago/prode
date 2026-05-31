@@ -3,7 +3,7 @@
  *
  * PR1: entities only.
  * PR2: actions added.
- * PR3/PR4: components and route helpers will be added.
+ * PR4: components added.
  */
 
 // Entities
@@ -27,3 +27,10 @@ export { resolveActiveGroup } from "./actions/resolve-active-group";
 
 export type { GroupSummary } from "./actions/list-my-groups";
 export { listMyGroups } from "./actions/list-my-groups";
+
+// Components
+export { CreateGroupForm } from "./components/create-group-form";
+export { JoinGroupForm } from "./components/join-group-form";
+export { OnboardingContent } from "./components/onboarding";
+export { GroupSwitcher } from "./components/group-switcher";
+export { GroupCard } from "./components/group-card";
