@@ -28,7 +28,6 @@ export interface TeamView {
 
 export interface InicioContentProps {
   displayName: string;
-  initials: string;
   subline: string;
   position: number | null;
   points: number;
@@ -210,7 +209,6 @@ function SectionHeader({
 
 export function InicioContent({
   displayName,
-  initials,
   subline,
   position,
   points,
@@ -231,24 +229,13 @@ export function InicioContent({
       animate={staggerContainer ? "visible" : undefined}
     >
       {/* Greeting */}
-      <motion.div
-        variants={rise}
-        className="flex items-start justify-between gap-3"
-      >
-        <div>
-          <h1 className="font-heading text-3xl font-bold leading-[1.05] tracking-tight">
-            ¡Hola, {displayName}! 🧉
-          </h1>
-          <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-            {subline}
-          </p>
-        </div>
-        <span
-          aria-hidden="true"
-          className="grid size-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-gol text-sm font-bold text-white"
-        >
-          {initials}
-        </span>
+      <motion.div variants={rise}>
+        <h1 className="font-heading text-3xl font-bold leading-[1.05] tracking-tight">
+          ¡Hola, {displayName}! 🧉
+        </h1>
+        <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+          {subline}
+        </p>
       </motion.div>
 
       {/* Desktop: hero + (stats over results) side-by-side; mobile: stacked. */}

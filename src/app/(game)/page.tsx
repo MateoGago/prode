@@ -8,16 +8,6 @@ import {
 import { formatKickoffLong } from "@/shared/datetime";
 import { createClient } from "@/shared/supabase/server";
 
-function initialsOf(name: string): string {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-  return initials || "JG";
-}
-
 export default async function HomePage() {
   const supabase = await createClient();
   const {
@@ -60,7 +50,6 @@ export default async function HomePage() {
   return (
     <InicioContent
       displayName={displayName}
-      initials={initialsOf(displayName)}
       subline={subline}
       position={dashboard.stats.position}
       points={dashboard.stats.points}

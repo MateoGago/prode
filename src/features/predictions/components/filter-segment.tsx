@@ -27,7 +27,7 @@ export function FilterSegment() {
 
   return (
     <div
-      className="flex gap-[7px] overflow-x-auto px-[18px] pb-[4px] pt-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex gap-[7px] overflow-x-auto pb-[4px] pt-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="toolbar"
       aria-label="Filtrar predicciones"
     >

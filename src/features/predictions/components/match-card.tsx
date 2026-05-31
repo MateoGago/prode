@@ -393,7 +393,14 @@ export function MatchCard({
                 <span className="size-[7px] rounded-full bg-warn" />
                 Sin guardar
               </span>
-            ) : null}
+            ) : (
+              // Empty (sin-cargar): a neutral pill keeps every editable card the
+              // same height so rows in the 2-col grid never look uneven.
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-card-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground/70 shadow-[inset_0_0_0_1.5px_var(--border)]">
+                <span className="size-[7px] rounded-full bg-muted-foreground/30" />
+                Sin cargar
+              </span>
+            )}
           </div>
         </>
       )}
