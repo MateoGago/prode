@@ -131,9 +131,9 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
           <TeamFlag
             name={next.home.name}
             flagUrl={next.home.flagUrl}
-            size={40}
-            imageClassName="shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-white/15"
-            placeholderClassName="shrink-0 rounded-full border border-dashed border-white/30"
+            size={36}
+            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-white/15"
+            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-white/30"
           />
           <span className="text-sm font-bold">{next.home.name}</span>
         </div>
@@ -144,9 +144,9 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
           <TeamFlag
             name={next.away.name}
             flagUrl={next.away.flagUrl}
-            size={40}
-            imageClassName="shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-white/15"
-            placeholderClassName="shrink-0 rounded-full border border-dashed border-white/30"
+            size={36}
+            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-white/15"
+            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-white/30"
           />
           <span className="text-sm font-bold">{next.away.name}</span>
         </div>
