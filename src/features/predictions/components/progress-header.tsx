@@ -30,55 +30,55 @@ export function ProgressHeader() {
     // gutters. The column starts at the desktop sidebar (w-60 = 15rem); on
     // mobile the sidebar is hidden, so it spans the whole viewport. Inner
     // content is re-constrained to container-app to stay aligned with the page.
-    <div className="sticky top-0 z-30 ml-[calc(50%_-_50vw)] w-screen border-b border-border/60 bg-background/86 py-3 backdrop-blur-md backdrop-saturate-150 md:ml-[calc(50%_-_50vw_+_7.5rem)] md:w-[calc(100vw_-_15rem)]">
+    <div className="sticky top-0 z-30 ml-[calc(50%-50vw)] w-screen border-b border-border/60 bg-background/86 py-3 backdrop-blur-md backdrop-saturate-150 md:ml-[calc(50%-50vw+7.5rem)] md:w-[calc(100vw-15rem)]">
       <div className="container-app">
         {/* Progress row: ring + meta */}
         <div className="flex items-center gap-[13px]">
-        {/* Conic-gradient ring */}
-        <ProgressRing pct={pct} />
+          {/* Conic-gradient ring */}
+          <ProgressRing pct={pct} />
 
-        {/* Text meta */}
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-[16.5px] font-[750] leading-[1.1]">
-            <em className="not-italic text-primary-deep">{cargados}</em>
-            {" de "}
-            {total}
-            {" cargados"}
-          </p>
-          <div className="mt-[3px] flex flex-wrap items-center gap-[7px] text-[12.5px] text-muted-foreground">
-            <span>
-              {"Te faltan "}
-              <strong className="text-foreground">{faltan}</strong>
-            </span>
-            {cierranHoy > 0 && (
-              <span className="inline-flex items-center gap-[5px] font-bold text-warn-deep">
-                {"·"}
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-warn"
-                />
-                {cierranHoy}
-                {" cierran hoy"}
+          {/* Text meta */}
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-[16.5px] font-[750] leading-[1.1]">
+              <em className="not-italic text-primary-deep">{cargados}</em>
+              {" de "}
+              {total}
+              {" cargados"}
+            </p>
+            <div className="mt-[3px] flex flex-wrap items-center gap-[7px] text-[12.5px] text-muted-foreground">
+              <span>
+                {"Te faltan "}
+                <strong className="text-foreground">{faltan}</strong>
               </span>
-            )}
+              {cierranHoy > 0 && (
+                <span className="inline-flex items-center gap-[5px] font-bold text-warn-deep">
+                  {"·"}
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-warn"
+                  />
+                  {cierranHoy}
+                  {" cierran hoy"}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Progress bar */}
-      <div
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`Progreso: ${pct}% cargado`}
-        className="mt-[11px] h-2 overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_2px_oklch(0.24_0.03_165/0.08)]"
-      >
-        {/* Snappier feedback once data arrives; no optimistic flip (design §2). */}
+        {/* Progress bar */}
         <div
-          className="h-full rounded-full bg-gradient-to-r from-primary to-[oklch(0.70_0.17_156)] transition-[width] duration-200"
-          style={{ width: `${pct}%` }}
-        />
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Progreso: ${pct}% cargado`}
+          className="mt-[11px] h-2 overflow-hidden rounded-full bg-muted shadow-[inset_0_1px_2px_oklch(0.24_0.03_165/0.08)]"
+        >
+          {/* Snappier feedback once data arrives; no optimistic flip (design §2). */}
+          <div
+            className="h-full rounded-full bg-linear-to-r from-primary to-[oklch(0.70_0.17_156)] transition-[width] duration-200"
+            style={{ width: `${pct}%` }}
+          />
         </div>
       </div>
     </div>
