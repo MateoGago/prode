@@ -12,6 +12,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/supabase/server";
 
+const UNIQUE_VIOLATION = "23505";
+
 export type JoinGroupResult =
   | { ok: true; code: string }
   | { ok: false; reason: "unauthenticated" | "invalid_code" };
@@ -48,8 +50,8 @@ export async function joinGroup(code: string): Promise<JoinGroupResult> {
       { onConflict: "group_id,user_id", ignoreDuplicates: true },
     );
 
-  // 23505 = unique_violation: user is already a member — silent success (REQ-02).
-  if (memberErr && memberErr.code !== "23505") {
+  // unique_violation: user is already a member — silent success (REQ-02).
+  if (memberErr && memberErr.code !== UNIQUE_VIOLATION) {
     throw new Error(memberErr.message);
   }
 
