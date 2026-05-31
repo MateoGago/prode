@@ -69,6 +69,8 @@ interface PredictionsBoardState {
 interface PredictionsBoardActions {
   /** Set or update the working prediction for a match. */
   setPrediction(matchId: string, next: PredictionInput): void;
+  /** Discard all unsaved (working) edits and clear any per-match save errors. */
+  discardEdits(): void;
   /** Derive the lock state for a given match (uses client clock as hint). */
   getLock(matchId: string, kickoffAt: Date): LockInfo;
   /** Derive the card state for a given match. */
@@ -185,6 +187,13 @@ export function PredictionsProvider({
     },
     [],
   );
+
+  const discardEdits = useCallback(() => {
+    // Drop every working edit back to the saved baseline (no server roundtrip).
+    // savedMap is untouched, so the "cargados" tally and saved cards stay put.
+    setWorkingMap({});
+    setErrorsByMatchId({});
+  }, []);
 
   const getLock = useCallback(
     (matchId: string, kickoffAt: Date): LockInfo => {
@@ -341,6 +350,7 @@ export function PredictionsProvider({
       errorsByMatchId,
       pending,
       setPrediction,
+      discardEdits,
       getLock,
       getCardState,
       getBatch,
@@ -359,6 +369,7 @@ export function PredictionsProvider({
       errorsByMatchId,
       pending,
       setPrediction,
+      discardEdits,
       getLock,
       getCardState,
       getBatch,
