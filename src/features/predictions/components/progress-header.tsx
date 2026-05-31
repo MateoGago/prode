@@ -24,7 +24,10 @@ export function ProgressHeader() {
   const pct = total > 0 ? Math.round((cargados / total) * 100) : 0;
 
   return (
-    <div className="sticky top-0 z-30 border-b border-border/60 bg-background/86 py-3 backdrop-blur-md backdrop-saturate-150">
+    // Full-bleed: cancel the container's horizontal padding with a negative
+    // margin and re-add it inside, so the sticky background spans edge-to-edge
+    // instead of leaving the page background visible in the gutters on scroll.
+    <div className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/86 px-4 py-3 backdrop-blur-md backdrop-saturate-150">
       {/* Progress row: ring + meta */}
       <div className="flex items-center gap-[13px]">
         {/* Conic-gradient ring */}
