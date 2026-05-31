@@ -47,9 +47,9 @@ export function AdvancerPicker({
               <TeamFlag
                 name={team.name}
                 flagUrl={team.flagUrl}
-                size={22}
-                imageClassName="size-[22px] shrink-0 rounded-full object-cover"
-                placeholderClassName="size-[22px] shrink-0 rounded-full border border-dashed border-border"
+                size={20}
+                imageClassName="shrink-0 rounded-[3px] object-cover ring-[1.5px] ring-inset ring-border"
+                placeholderClassName="shrink-0 rounded-[3px] border border-dashed border-border bg-card-muted"
               />
               {team.name}
             </button>

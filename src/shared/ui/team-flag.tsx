@@ -3,32 +3,35 @@ import Image from "next/image";
 export type TeamFlagProps = {
   name: string;
   flagUrl: string | null;
-  /** Pixel size (both width and height). Defaults to 30. */
+  /**
+   * Flag height in pixels. The width is derived from the 4:3 aspect ratio of
+   * the flagcdn source images. Defaults to 30.
+   */
   size?: number;
-  /** Class for the <Image> when flagUrl is present. Defaults to the standard ring-border pill. */
+  /** Class for the <Image> when flagUrl is present. Defaults to the standard rectangular flag. */
   imageClassName?: string;
-  /** Class for the placeholder <div> when flagUrl is null. Defaults to a dashed-border circle. */
+  /** Class for the placeholder <div> when flagUrl is null. Defaults to a dashed-border rectangle. */
   placeholderClassName?: string;
 };
 
 const DEFAULT_SIZE = 30;
 
-// size-[30px] is explicit so Tailwind preflight `img { height: auto }` cannot
-// override the height and turn circles into ellipses.
+// flagcdn `wNNN` images are 4:3, so we render a 4:3 box: a flag-shaped
+// rectangle rather than a circle (which clipped flags awkwardly). Slightly
+// rounded corners keep it soft without distorting the proportions.
+const ASPECT = 4 / 3;
+
 const DEFAULT_IMAGE_CLASS =
-  "size-[30px] shrink-0 rounded-full object-cover ring-[1.5px] ring-inset ring-border";
+  "shrink-0 rounded-[3px] object-cover ring-[1.5px] ring-inset ring-border";
 
-const DEFAULT_PLACEHOLDER_CLASS_30 =
-  "size-[30px] shrink-0 rounded-full border border-dashed border-border bg-card-muted";
-
-const DEFAULT_PLACEHOLDER_CLASS_CUSTOM =
-  "shrink-0 rounded-full border border-dashed border-border bg-card-muted";
+const DEFAULT_PLACEHOLDER_CLASS =
+  "shrink-0 rounded-[3px] border border-dashed border-border bg-card-muted";
 
 /**
- * Null-safe team flag avatar.
- * When `flagUrl` is null, renders an aria-hidden placeholder circle instead of
- * crashing or showing a broken image — the most common case during group-stage
- * setup where teams are TBD.
+ * Null-safe team flag.
+ * When `flagUrl` is null, renders an aria-hidden placeholder rectangle instead
+ * of crashing or showing a broken image — the most common case during
+ * group-stage setup where teams are TBD.
  */
 export function TeamFlag({
   name,
@@ -37,18 +40,21 @@ export function TeamFlag({
   imageClassName,
   placeholderClassName,
 }: TeamFlagProps) {
-  const isDefault = size === DEFAULT_SIZE;
-  const sizeStyle = isDefault ? undefined : { width: size, height: size };
+  const height = size;
+  const width = Math.round(size * ASPECT);
+  // Width/height are set inline so Tailwind preflight (`img { height: auto }`)
+  // cannot override them and squash the flag.
+  const dimensionStyle = { width, height };
 
   if (flagUrl) {
     return (
       <Image
         src={flagUrl}
         alt={`Bandera de ${name}`}
-        width={size}
-        height={size}
+        width={width}
+        height={height}
         unoptimized
-        style={sizeStyle}
+        style={dimensionStyle}
         className={imageClassName ?? DEFAULT_IMAGE_CLASS}
       />
     );
@@ -57,13 +63,8 @@ export function TeamFlag({
   return (
     <div
       aria-hidden="true"
-      style={sizeStyle}
-      className={
-        placeholderClassName ??
-        (isDefault
-          ? DEFAULT_PLACEHOLDER_CLASS_30
-          : DEFAULT_PLACEHOLDER_CLASS_CUSTOM)
-      }
+      style={dimensionStyle}
+      className={placeholderClassName ?? DEFAULT_PLACEHOLDER_CLASS}
     />
   );
 }

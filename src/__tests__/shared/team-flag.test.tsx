@@ -21,44 +21,51 @@ describe("TeamFlag", () => {
     expect(placeholder).toBeInTheDocument();
   });
 
-  it("applies the default 30px size when no size prop is given", () => {
+  it("applies the default 30px height with a 4:3 width as inline style", () => {
     render(<TeamFlag name="Brasil" flagUrl={null} />);
-    const placeholder = document.querySelector("[aria-hidden='true']");
-    expect(placeholder?.className).toContain("size-[30px]");
+    const placeholder = document.querySelector(
+      "[aria-hidden='true']",
+    ) as HTMLElement;
+    // height = 30, width = round(30 * 4 / 3) = 40
+    expect(placeholder?.style.height).toBe("30px");
+    expect(placeholder?.style.width).toBe("40px");
   });
 
-  it("renders the image as a perfect circle at default 30px (no ellipse)", () => {
+  it("renders the image as a 4:3 rectangle with subtly rounded corners", () => {
     render(
       <TeamFlag name="Argentina" flagUrl="https://flags.example.com/ar.png" />,
     );
     const img = screen.getByRole("img") as HTMLImageElement;
-    // Must have explicit square sizing via class so Tailwind preflight
-    // `img { height: auto }` cannot override the height attribute.
-    expect(img.className).toContain("size-[30px]");
+    // Explicit inline width/height so Tailwind preflight `img { height: auto }`
+    // cannot squash the flag. Rectangular (not a circle).
+    expect(img.style.height).toBe("30px");
+    expect(img.style.width).toBe("40px");
     expect(img.className).toContain("object-cover");
-    expect(img.className).toContain("rounded-full");
+    expect(img.className).toContain("rounded-[3px]");
+    expect(img.className).not.toContain("rounded-full");
   });
 
-  it("applies a custom numeric size as inline style on placeholder", () => {
-    render(<TeamFlag name="Brasil" flagUrl={null} size={40} />);
+  it("derives a 4:3 width from a custom size on the placeholder", () => {
+    render(<TeamFlag name="Brasil" flagUrl={null} size={45} />);
     const placeholder = document.querySelector(
       "[aria-hidden='true']",
     ) as HTMLElement;
-    expect(placeholder?.style.width).toBe("40px");
-    expect(placeholder?.style.height).toBe("40px");
+    // height = 45, width = round(45 * 4 / 3) = 60
+    expect(placeholder?.style.height).toBe("45px");
+    expect(placeholder?.style.width).toBe("60px");
   });
 
-  it("applies a custom size to the image as inline style", () => {
+  it("derives a 4:3 width from a custom size on the image", () => {
     render(
       <TeamFlag
         name="Brasil"
         flagUrl="https://flags.example.com/br.png"
-        size={40}
+        size={45}
       />,
     );
     const img = screen.getByRole("img") as HTMLImageElement;
-    expect(img.style.width).toBe("40px");
-    expect(img.style.height).toBe("40px");
+    expect(img.style.height).toBe("45px");
+    expect(img.style.width).toBe("60px");
   });
 
   it("accepts imageClassName and placeholderClassName overrides", () => {
