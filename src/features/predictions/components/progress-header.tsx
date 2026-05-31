@@ -24,12 +24,16 @@ export function ProgressHeader() {
   const pct = total > 0 ? Math.round((cargados / total) * 100) : 0;
 
   return (
-    // Full-bleed: cancel the container's horizontal padding with a negative
-    // margin and re-add it inside, so the sticky background spans edge-to-edge
-    // instead of leaving the page background visible in the gutters on scroll.
-    <div className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/86 px-4 py-3 backdrop-blur-md backdrop-saturate-150">
-      {/* Progress row: ring + meta */}
-      <div className="flex items-center gap-[13px]">
+    // Full-bleed band: the sticky background spans the entire content column
+    // instead of stopping at container-app's 1100px max-width, so when pinned
+    // it reaches the column edges rather than leaving the page background in the
+    // gutters. The column starts at the desktop sidebar (w-60 = 15rem); on
+    // mobile the sidebar is hidden, so it spans the whole viewport. Inner
+    // content is re-constrained to container-app to stay aligned with the page.
+    <div className="sticky top-0 z-30 ml-[calc(50%_-_50vw)] w-screen border-b border-border/60 bg-background/86 py-3 backdrop-blur-md backdrop-saturate-150 md:ml-[calc(50%_-_50vw_+_7.5rem)] md:w-[calc(100vw_-_15rem)]">
+      <div className="container-app">
+        {/* Progress row: ring + meta */}
+        <div className="flex items-center gap-[13px]">
         {/* Conic-gradient ring */}
         <ProgressRing pct={pct} />
 
@@ -75,6 +79,7 @@ export function ProgressHeader() {
           className="h-full rounded-full bg-gradient-to-r from-primary to-[oklch(0.70_0.17_156)] transition-[width] duration-200"
           style={{ width: `${pct}%` }}
         />
+        </div>
       </div>
     </div>
   );

@@ -9,6 +9,8 @@
  * segment is filled foreground-on-background, inactive is a muted inset pill.
  */
 
+import { CalendarDays, LayoutGrid, type LucideIcon } from "lucide-react";
+
 import type { ViewMode } from "@/features/predictions/components/predictions-provider";
 import { cn } from "@/shared/lib/utils";
 
@@ -25,12 +27,14 @@ export function ViewModeToggle() {
     >
       <ViewModeSegment
         label="Día"
+        icon={CalendarDays}
         mode="dia"
         active={viewMode === "dia"}
         onSelect={() => setViewMode("dia")}
       />
       <ViewModeSegment
         label="Etapa"
+        icon={LayoutGrid}
         mode="etapa"
         active={viewMode === "etapa"}
         onSelect={() => setViewMode("etapa")}
@@ -45,12 +49,18 @@ export function ViewModeToggle() {
 
 interface ViewModeSegmentProps {
   label: string;
+  icon: LucideIcon;
   mode: ViewMode;
   active: boolean;
   onSelect: () => void;
 }
 
-function ViewModeSegment({ label, active, onSelect }: ViewModeSegmentProps) {
+function ViewModeSegment({
+  label,
+  icon: Icon,
+  active,
+  onSelect,
+}: ViewModeSegmentProps) {
   return (
     <button
       type="button"
@@ -58,12 +68,13 @@ function ViewModeSegment({ label, active, onSelect }: ViewModeSegmentProps) {
       data-active={active}
       onClick={onSelect}
       className={cn(
-        "flex cursor-pointer select-none items-center rounded-full border-0 px-[15px] py-[7px] font-sans text-[13px] font-[650] transition-all duration-[180ms]",
+        "flex cursor-pointer select-none items-center gap-1.5 rounded-full border-0 px-[15px] py-[7px] font-sans text-[13px] font-[650] transition-all duration-[180ms]",
         active
           ? "bg-background text-foreground shadow-[0_1px_2px_oklch(0.24_0.03_165/0.12)]"
           : "bg-transparent text-muted-foreground hover:text-foreground",
       )}
     >
+      <Icon className="size-[15px]" aria-hidden="true" />
       {label}
     </button>
   );

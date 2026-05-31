@@ -36,7 +36,7 @@ export function BatchBar() {
   return (
     <div
       data-save-drawer
-      className="fixed inset-x-0 bottom-0 z-50 overflow-hidden rounded-t-3xl border border-border/60 bg-card shadow-[0_-12px_40px_-12px_oklch(0.24_0.03_165/0.35)] backdrop-blur md:z-40"
+      className="fixed inset-x-0 bottom-0 z-50 overflow-hidden border-t border-border/60 bg-card shadow-[0_-12px_40px_-12px_oklch(0.24_0.03_165/0.35)] backdrop-blur md:z-40"
     >
       {/* Progress strip hugging the sheet's top edge. */}
       <div
