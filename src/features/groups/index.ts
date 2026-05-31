@@ -12,7 +12,7 @@ export type {
   GroupNameError,
   GroupNameValidationResult,
 } from "./entities/membership";
-export { alreadyMember, validateGroupName } from "./entities/membership";
+export { validateGroupName } from "./entities/membership";
 export { generateInviteCode, isValidInviteCode } from "./entities/invite-code";
 
 // Actions

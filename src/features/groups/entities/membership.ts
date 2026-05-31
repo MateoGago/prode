@@ -31,14 +31,3 @@ export function validateGroupName(name: string): GroupNameValidationResult {
   }
   return { ok: true };
 }
-
-/**
- * Returns true if the given userId is already present in the memberIds array.
- * Used to detect duplicates before attempting a DB insert (REQ-03).
- *
- * The DB enforces uniqueness via UNIQUE (group_id, user_id); this is a fast
- * pure-layer check for early feedback, not the authoritative guard.
- */
-export function alreadyMember(userId: string, memberIds: string[]): boolean {
-  return memberIds.includes(userId);
-}
