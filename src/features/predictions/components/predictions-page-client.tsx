@@ -1,23 +1,29 @@
 "use client";
 
 import type { PredictionInput } from "@/features/predictions/entities/prediction";
-import type { GroupBlock } from "@/features/predictions/entities/predictions-page";
+import type {
+  DayBlock,
+  GroupBlock,
+} from "@/features/predictions/entities/predictions-page";
 
 import { BatchBar } from "./batch-bar";
+import { BoardSections } from "./board-sections";
 import { FilterSegment } from "./filter-segment";
 import { FilteredGroupsOrEmpty } from "./filtered-groups-or-empty";
-import { GroupNav } from "./group-nav";
-import { GroupSection } from "./group-section";
+import { BoardGroupNav } from "./group-nav";
 import { PredictionsProvider } from "./predictions-provider";
 import { ProgressHeader } from "./progress-header";
+import { ViewModeToggle } from "./view-mode-toggle";
 
 export type PredictionsPageClientProps = {
   groups: GroupBlock[];
+  days: DayBlock[];
   initialPredictionsByMatchId: Record<string, PredictionInput>;
 };
 
 export function PredictionsPageClient({
   groups,
+  days,
   initialPredictionsByMatchId,
 }: PredictionsPageClientProps) {
   if (groups.length === 0) {
@@ -35,21 +41,21 @@ export function PredictionsPageClient({
     >
       <ProgressHeader />
 
-      {/* Group nav chips + segmented filter — Slice 3 */}
-      <GroupNav />
+      {/* View switch (Día/Etapa) — right-aligned above the filter row. */}
+      <div className="flex items-center justify-between gap-3 pt-3">
+        <span className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+          Ver por
+        </span>
+        <ViewModeToggle />
+      </div>
+
+      {/* Group nav chips (Etapa only) + segmented filter — Slice 3 */}
+      <BoardGroupNav />
       <FilterSegment />
 
       <FilteredGroupsOrEmpty>
-        {/* pb clears the fixed BatchBar so the last cards aren't hidden behind it */}
-        <div className="grid gap-8 pt-4 pb-44 md:pb-28">
-          {groups.map((group) => (
-            <GroupSection
-              key={group.groupLabel}
-              groupLabel={group.groupLabel}
-              matches={group.matches}
-            />
-          ))}
-        </div>
+        {/* BoardSections owns the bottom padding that clears the fixed BatchBar. */}
+        <BoardSections groups={groups} days={days} />
       </FilteredGroupsOrEmpty>
 
       {/* Sibling of the scroll content (constraint A): fixed, never inside it. */}

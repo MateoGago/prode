@@ -13,6 +13,7 @@ import type {
   Round,
   Team,
 } from "@/features/fixtures/entities/match";
+import { arDayParts } from "@/shared/datetime";
 
 import type { PredictionInput } from "./prediction";
 import type { PredictionRow } from "./rows";
@@ -153,3 +154,58 @@ export function groupMatches(matches: Match[]): GroupBlock[] {
       }),
     }));
 }
+
+/**
+ * A calendar-day bucket for the "por día" predictions view: every match whose
+ * AR-local kickoff falls on the same date, with the display parts needed for
+ * the day header. `dateKey` doubles as the section anchor id and sort key.
+ */
+export interface DayBlock {
+  /** AR-local "YYYY-MM-DD" — stable anchor id + sort key. */
+  dateKey: string;
+  /** Day of month, unpadded (badge). */
+  day: string;
+  /** Capitalized AR weekday (e.g. "Jueves"). */
+  weekday: string;
+  /** Capitalized AR month (e.g. "Junio"). */
+  month: string;
+  matches: Match[];
+}
+
+/**
+ * Group matches by their AR-local kickoff date. Unlike `groupMatches`, this is
+ * round-agnostic — it buckets whatever it's given — so the day view stays
+ * correct if knockout fixtures are loaded alongside the group stage later.
+ * Days are ordered chronologically; matches within a day by kickoff instant.
+ */
+export function groupMatchesByDay(matches: Match[]): DayBlock[] {
+  const grouped = new Map<
+    string,
+    { parts: ArDayPartsLike; matches: Match[] }
+  >();
+
+  for (const match of matches) {
+    const parts = arDayParts(match.kickoffAt);
+    const bucket = grouped.get(parts.key);
+    if (bucket) {
+      bucket.matches.push(match);
+    } else {
+      grouped.set(parts.key, { parts, matches: [match] });
+    }
+  }
+
+  return Array.from(grouped.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dateKey, { parts, matches: dayMatches }]) => ({
+      dateKey,
+      day: parts.day,
+      weekday: parts.weekday,
+      month: parts.month,
+      matches: [...dayMatches].sort(
+        (a, b) => a.kickoffAt.getTime() - b.kickoffAt.getTime(),
+      ),
+    }));
+}
+
+/** Local alias so the map value stays self-documenting without re-importing. */
+type ArDayPartsLike = ReturnType<typeof arDayParts>;

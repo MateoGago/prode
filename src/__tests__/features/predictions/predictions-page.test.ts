@@ -4,6 +4,7 @@ import type { Match, Team } from "@/features/fixtures/entities/match";
 import {
   buildPredictionsByMatchId,
   groupMatches,
+  groupMatchesByDay,
   mapMatchRow,
   type MatchWithTeamsRow,
   normalizeTeamRelation,
@@ -196,5 +197,68 @@ describe("groupMatches", () => {
     ]);
 
     expect(groups[0].groupLabel).toBe("Sin asignar");
+  });
+});
+
+describe("groupMatchesByDay", () => {
+  it("buckets matches by AR-local kickoff date and orders days chronologically", () => {
+    const days = groupMatchesByDay([
+      groupMatch({
+        id: "d12",
+        kickoffAt: new Date("2026-06-12T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "d11",
+        kickoffAt: new Date("2026-06-11T19:00:00.000Z"),
+      }),
+    ]);
+
+    expect(days.map((d) => d.dateKey)).toEqual(["2026-06-11", "2026-06-12"]);
+    expect(days[0]).toMatchObject({
+      dateKey: "2026-06-11",
+      day: "11",
+      weekday: "Jueves",
+      month: "Junio",
+    });
+  });
+
+  it("orders matches within a day by kickoff instant", () => {
+    const days = groupMatchesByDay([
+      groupMatch({
+        id: "late",
+        kickoffAt: new Date("2026-06-11T22:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "early",
+        kickoffAt: new Date("2026-06-11T16:00:00.000Z"),
+      }),
+    ]);
+
+    expect(days).toHaveLength(1);
+    expect(days[0].matches.map((m) => m.id)).toEqual(["early", "late"]);
+  });
+
+  it("groups a late-night UTC kickoff under its AR calendar day", () => {
+    // 00:00 UTC Jun 12 = 21:00 ART Jun 11 → must share the Jun 11 bucket.
+    const days = groupMatchesByDay([
+      groupMatch({
+        id: "evening",
+        kickoffAt: new Date("2026-06-11T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "latenight",
+        kickoffAt: new Date("2026-06-12T00:00:00.000Z"),
+      }),
+    ]);
+
+    expect(days).toHaveLength(1);
+    expect(days[0].dateKey).toBe("2026-06-11");
+    expect(days[0].matches.map((m) => m.id)).toEqual(["evening", "latenight"]);
+  });
+
+  it("is round-agnostic — it buckets whatever it is given", () => {
+    const days = groupMatchesByDay([groupMatch({ id: "ko", round: "r16" })]);
+
+    expect(days.flatMap((d) => d.matches.map((m) => m.id))).toEqual(["ko"]);
   });
 });

@@ -6,23 +6,29 @@ export { saveBatchPredictions } from "./actions/save-batch-predictions";
 export { savePrediction } from "./actions/save-prediction";
 export { AdvancerPicker } from "./components/advancer-picker";
 export { BatchBar } from "./components/batch-bar";
+export { BoardSections } from "./components/board-sections";
+export { DaySection } from "./components/day-section";
 export { FilterSegment } from "./components/filter-segment";
-export { GroupNav } from "./components/group-nav";
+export { BoardGroupNav, GroupNav } from "./components/group-nav";
 export { MatchCard } from "./components/match-card";
 export { GroupSection } from "./components/group-section";
 export { PredictionsPageClient } from "./components/predictions-page-client";
 export { ProgressHeader } from "./components/progress-header";
+export { ViewModeToggle } from "./components/view-mode-toggle";
 export {
   PredictionsProvider,
   usePredictionsBoard,
 } from "./components/predictions-provider";
 export type { AdvancerPickerProps } from "./components/advancer-picker";
+export type { BoardSectionsProps } from "./components/board-sections";
+export type { DaySectionProps } from "./components/day-section";
 export type { MatchCardProps } from "./components/match-card";
 export type { GroupSectionProps } from "./components/group-section";
 export type { PredictionsPageClientProps } from "./components/predictions-page-client";
 export type {
   PredictionsBoardContext,
   PredictionsProviderProps,
+  ViewMode,
 } from "./components/predictions-provider";
 export { decideBatch } from "./entities/batch";
 export type {
@@ -30,7 +36,8 @@ export type {
   BatchSaveInput,
   BatchSaveResult,
 } from "./entities/batch";
-export type { GroupBlock } from "./entities/predictions-page";
+export { groupMatchesByDay } from "./entities/predictions-page";
+export type { DayBlock, GroupBlock } from "./entities/predictions-page";
 export type {
   MatchContext,
   MatchKickoffContext,

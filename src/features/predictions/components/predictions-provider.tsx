@@ -47,6 +47,12 @@ import {
 // Context shape
 // ---------------------------------------------------------------------------
 
+/**
+ * How the board groups its matches. "dia" buckets by AR-local kickoff date;
+ * "etapa" buckets by group (A–L). Defaults to "dia" (see provider).
+ */
+export type ViewMode = "dia" | "etapa";
+
 interface PredictionsBoardState {
   /** Authoritative saved predictions (from server seed + batch-save promotions). */
   savedMap: Record<string, PredictionInput>;
@@ -60,6 +66,8 @@ interface PredictionsBoardState {
   groupProgress: GroupProgress[];
   /** Active filter tab. */
   filter: FilterKind;
+  /** Active grouping view ("dia" | "etapa"). */
+  viewMode: ViewMode;
   /** Per-match save errors (from batch rejection). */
   errorsByMatchId: Record<string, string>;
   /** True while a batch save is in-flight. */
@@ -77,6 +85,8 @@ interface PredictionsBoardActions {
   getBatch(): UpsertItem[];
   /** Update the active filter. */
   setFilter(kind: FilterKind): void;
+  /** Switch the grouping view ("dia" | "etapa"). */
+  setViewMode(mode: ViewMode): void;
   /** Scroll the viewport to the group's section anchor. */
   jumpToGroup(label: string): void;
   /**
@@ -130,6 +140,8 @@ export function PredictionsProvider({
     {},
   );
   const [filter, setFilter] = useState<FilterKind>("todos");
+  // Default to the calendar-day view (matches the Cocos-style "DÍA" default).
+  const [viewMode, setViewMode] = useState<ViewMode>("dia");
   const [errorsByMatchId, setErrorsByMatchId] = useState<
     Record<string, string>
   >({});
@@ -338,6 +350,7 @@ export function PredictionsProvider({
       progress,
       groupProgress,
       filter,
+      viewMode,
       errorsByMatchId,
       pending,
       setPrediction,
@@ -345,6 +358,7 @@ export function PredictionsProvider({
       getCardState,
       getBatch,
       setFilter,
+      setViewMode,
       getFilterCount,
       jumpToGroup,
       saveBatch,
@@ -356,6 +370,7 @@ export function PredictionsProvider({
       progress,
       groupProgress,
       filter,
+      viewMode,
       errorsByMatchId,
       pending,
       setPrediction,
