@@ -1,19 +1,13 @@
-// TODO(prode-groups PR3): redirect to /g/{code}/leaderboard or /onboarding
-// once group routes are live. This page is temporarily stubbed because the
-// global no-arg get_leaderboard() was dropped in the groups migration.
-// Do NOT call getLeaderboard() here — it now requires a groupId.
+import { redirect } from "next/navigation";
 
+/**
+ * /tabla is superseded by the group-scoped /g/[code]/leaderboard route (PR3).
+ *
+ * The global leaderboard was removed in the groups migration — get_leaderboard()
+ * now requires a group id. Any bookmark or old link hitting /tabla is sent to
+ * /onboarding, where the user can create or join a group and then land on the
+ * correct group leaderboard. (T-19, REQ-06, REQ-07)
+ */
 export default function TablaPage() {
-  return (
-    <section className="grid gap-6">
-      <div className="grid gap-1">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight">
-          Tabla de posiciones
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Seleccioná un grupo para ver la tabla de posiciones.
-        </p>
-      </div>
-    </section>
-  );
+  redirect("/onboarding");
 }
