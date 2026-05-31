@@ -41,6 +41,9 @@ export function JoinGroupForm() {
 
       if (!result.ok) {
         if (result.reason === "invalid_code") {
+          form.setError("code", {
+            message: "Código inválido. Revisá que esté bien escrito",
+          });
           toast.error("Código inválido. Revisá que esté bien escrito");
         } else {
           toast.error("Tenés que iniciar sesión para unirte a un grupo");

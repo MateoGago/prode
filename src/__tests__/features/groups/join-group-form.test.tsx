@@ -92,6 +92,23 @@ describe("JoinGroupForm", () => {
     });
   });
 
+  it("shows inline error message under the input for invalid code", async () => {
+    mockJoinGroup.mockResolvedValue({ ok: false, reason: "invalid_code" });
+    const user = userEvent.setup();
+
+    render(<JoinGroupForm />);
+
+    await user.type(
+      screen.getByPlaceholderText(/código de invitación/i),
+      "BADCODE1",
+    );
+    await user.click(screen.getByRole("button", { name: /unirme/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/código inválido/i)).toBeInTheDocument();
+    });
+  });
+
   it("shows inline validation error for empty code", async () => {
     const user = userEvent.setup();
 
