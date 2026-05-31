@@ -5,10 +5,14 @@ import {
 } from "../entities/leaderboard";
 import type { LeaderboardRow } from "../components/leaderboard-table";
 
-export async function getLeaderboard(): Promise<LeaderboardRow[]> {
+export async function getLeaderboard(
+  groupId: string,
+): Promise<LeaderboardRow[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("get_leaderboard");
+  const { data, error } = await supabase.rpc("get_leaderboard", {
+    p_group_id: groupId,
+  });
 
   if (error) {
     throw new Error(error.message);
