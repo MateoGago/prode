@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
+import type { ReactNode } from "react";
 
 import type { LastResultRow } from "@/features/dashboard";
 import { Button } from "@/shared/ui/button";
@@ -29,6 +30,8 @@ export interface TeamView {
 export interface InicioContentProps {
   displayName: string;
   subline: string;
+  /** Group standings section, rendered right under the greeting. */
+  groupsSlot?: ReactNode;
   /**
    * When null, the Posición and Puntos StatCards are NOT rendered.
    * The home hub omits them because position is group-scoped (shown in
@@ -216,6 +219,7 @@ function SectionHeader({
 export function InicioContent({
   displayName,
   subline,
+  groupsSlot,
   position,
   points = 0,
   played,
@@ -244,9 +248,24 @@ export function InicioContent({
         </p>
       </motion.div>
 
-      {/* Desktop: hero + (stats over results) side-by-side; mobile: stacked. */}
+      {/* Group standings (passed by the page) — right under the greeting. */}
+      {groupsSlot ? (
+        <motion.div variants={rise}>{groupsSlot}</motion.div>
+      ) : null}
+
+      {/*
+       * Balanced two-column on lg: the próximo-partido hero on the left, and a
+       * stack of stats + últimos resultados on the right so neither column hangs
+       * with empty space. Mobile stacks everything.
+       */}
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-start">
-        {/* Left column on lg: stats + próximo partido */}
+        {/* Left: próximo partido hero */}
+        <motion.div variants={rise} className="grid gap-3">
+          <SectionHeader title="Tu próximo partido" />
+          {nextMatch ? <NextMatchHero next={nextMatch} /> : <NoNextMatch />}
+        </motion.div>
+
+        {/* Right: stats over últimos resultados */}
         <div className="grid gap-6">
           <motion.div
             variants={rise}
@@ -274,33 +293,27 @@ export function InicioContent({
           </motion.div>
 
           <motion.div variants={rise} className="grid gap-3">
-            <SectionHeader title="Tu próximo partido" />
-            {nextMatch ? <NextMatchHero next={nextMatch} /> : <NoNextMatch />}
+            {/*
+             * "Ver tabla" previously linked to /tabla which now redirects to
+             * /onboarding. The leaderboard lives per-group at
+             * /g/{code}/leaderboard; this hub has no single active-group
+             * context, so the CTA is removed rather than pointing to a dead end.
+             */}
+            <SectionHeader title="Últimos resultados" />
+            {lastResults.length > 0 ? (
+              <div className="grid gap-2.5">
+                {lastResults.map((row) => (
+                  <ResultRow key={row.matchId} row={row} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="Todavía no jugaste ninguna"
+                description="Cargá tus pronósticos y, cuando se confirmen los resultados, los vas a ver acá con tus puntos."
+              />
+            )}
           </motion.div>
         </div>
-
-        {/* Right column on lg: últimos resultados */}
-        <motion.div variants={rise} className="grid gap-3">
-          {/*
-           * "Ver tabla" previously linked to /tabla which now redirects to
-           * /onboarding. The leaderboard lives per-group at
-           * /g/{code}/leaderboard; this hub has no single active-group context,
-           * so the CTA is removed rather than pointing to a dead end.
-           */}
-          <SectionHeader title="Últimos resultados" />
-          {lastResults.length > 0 ? (
-            <div className="grid gap-2.5">
-              {lastResults.map((row) => (
-                <ResultRow key={row.matchId} row={row} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="Todavía no jugaste ninguna"
-              description="Cargá tus pronósticos y, cuando se confirmen los resultados, los vas a ver acá con tus puntos."
-            />
-          )}
-        </motion.div>
       </div>
     </motion.div>
   );
