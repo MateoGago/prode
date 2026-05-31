@@ -69,11 +69,11 @@ export default async function HomePage() {
       </section>
 
       {/* Rest of the dashboard — próximo partido, cargadas, últimos resultados */}
+      {/* position omitted — group-scoped stats are shown in GroupCards above */}
       <InicioContent
         displayName={displayName}
         subline={subline}
         position={null}
-        points={0}
         played={dashboard.played}
         totalMatches={dashboard.totalMatches}
         predictionsLoaded={dashboard.predictionsProgress.loaded}
