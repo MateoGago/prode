@@ -3,7 +3,9 @@
 /**
  * joinGroup — resolves an invite code and enrolls the current user.
  *
- * Idempotent: ON CONFLICT DO NOTHING means re-joining is a no-op at the DB.
+ * Idempotent: upsert with ignoreDuplicates means re-joining is a no-op at the
+ * DB level. A 23505 unique-violation (belt-and-suspenders) is also treated as
+ * silent success per REQ-02.
  * Returns a discriminated union — never throws on domain failures.
  */
 
@@ -41,9 +43,13 @@ export async function joinGroup(code: string): Promise<JoinGroupResult> {
 
   const { error: memberErr } = await supabase
     .from("group_members")
-    .insert({ group_id: group.id, user_id: user.id });
+    .upsert(
+      { group_id: group.id, user_id: user.id },
+      { onConflict: "group_id,user_id", ignoreDuplicates: true },
+    );
 
-  if (memberErr) {
+  // 23505 = unique_violation: user is already a member — silent success (REQ-02).
+  if (memberErr && memberErr.code !== "23505") {
     throw new Error(memberErr.message);
   }
 

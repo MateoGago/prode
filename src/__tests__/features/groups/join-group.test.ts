@@ -4,14 +4,14 @@ import { joinGroup } from "@/features/groups/actions/join-group";
 
 // ── Supabase server mock ──────────────────────────────────────────────────────
 // groups.select().eq().maybeSingle() chain for code lookup
-// group_members.insert() for membership upsert
+// group_members.upsert() for idempotent membership insert
 const {
   mockGetUser,
   mockFrom,
   mockSelectGroups,
   mockEqGroups,
   mockMaybeSingleGroups,
-  mockInsertMembers,
+  mockUpsertMembers,
 } = vi.hoisted(() => {
   const mockMaybeSingleGroups = vi.fn();
   const mockEqGroups = vi
@@ -19,11 +19,11 @@ const {
     .mockReturnValue({ maybeSingle: mockMaybeSingleGroups });
   const mockSelectGroups = vi.fn().mockReturnValue({ eq: mockEqGroups });
 
-  const mockInsertMembers = vi.fn();
+  const mockUpsertMembers = vi.fn();
 
   const mockFrom = vi.fn((table: string) => {
     if (table === "groups") return { select: mockSelectGroups };
-    return { insert: mockInsertMembers };
+    return { upsert: mockUpsertMembers };
   });
 
   const mockGetUser = vi.fn();
@@ -34,7 +34,7 @@ const {
     mockSelectGroups,
     mockEqGroups,
     mockMaybeSingleGroups,
-    mockInsertMembers,
+    mockUpsertMembers,
   };
 });
 
@@ -67,9 +67,9 @@ describe("joinGroup", () => {
     mockSelectGroups.mockReturnValue({ eq: mockEqGroups });
     mockFrom.mockImplementation((table: string) => {
       if (table === "groups") return { select: mockSelectGroups };
-      return { insert: mockInsertMembers };
+      return { upsert: mockUpsertMembers };
     });
-    mockInsertMembers.mockResolvedValue({ error: null });
+    mockUpsertMembers.mockResolvedValue({ error: null });
   });
 
   it("returns { ok: false, reason: 'unauthenticated' } when no user", async () => {
@@ -90,25 +90,41 @@ describe("joinGroup", () => {
     const result = await joinGroup("ZZZZZZZZ");
 
     expect(result).toEqual({ ok: false, reason: "invalid_code" });
-    expect(mockInsertMembers).not.toHaveBeenCalled();
+    expect(mockUpsertMembers).not.toHaveBeenCalled();
   });
 
-  it("inserts membership row on valid code", async () => {
+  it("upserts membership row on valid code", async () => {
     const result = await joinGroup(CODE);
 
     expect(result).toMatchObject({ ok: true, code: CODE });
     expect(mockFrom).toHaveBeenCalledWith("group_members");
-    expect(mockInsertMembers).toHaveBeenCalledWith(
+    expect(mockUpsertMembers).toHaveBeenCalledWith(
       expect.objectContaining({
         group_id: GROUP_ID,
         user_id: USER_ID,
       }),
+      expect.objectContaining({ onConflict: "group_id,user_id" }),
     );
   });
 
-  it("is idempotent — succeeds silently when already a member", async () => {
-    // ON CONFLICT DO NOTHING: no error returned, just no rows inserted
-    mockInsertMembers.mockResolvedValueOnce({ error: null });
+  it("is idempotent — succeeds silently when already a member (upsert ignoreDuplicates)", async () => {
+    // upsert with ignoreDuplicates: DB returns no error and no rows — still success
+    mockUpsertMembers.mockResolvedValueOnce({ error: null });
+
+    const result = await joinGroup(CODE);
+
+    expect(result).toMatchObject({ ok: true, code: CODE });
+  });
+
+  it("is idempotent — 23505 unique-violation returns success, not a throw (REQ-02)", async () => {
+    // Simulates the real Postgres 23505 error that plain .insert() would surface.
+    // The action MUST treat this as a silent no-op and return ok: true.
+    mockUpsertMembers.mockResolvedValueOnce({
+      error: {
+        code: "23505",
+        message: "duplicate key value violates unique constraint",
+      },
+    });
 
     const result = await joinGroup(CODE);
 
@@ -123,11 +139,11 @@ describe("joinGroup", () => {
     expect(mockEqGroups).toHaveBeenCalledWith("invite_code", CODE);
   });
 
-  it("throws on unexpected DB error during membership insert", async () => {
-    mockInsertMembers.mockResolvedValueOnce({
-      error: { message: "DB failure" },
+  it("throws on unexpected DB error during membership upsert", async () => {
+    mockUpsertMembers.mockResolvedValueOnce({
+      error: { code: "42501", message: "permission denied" },
     });
 
-    await expect(joinGroup(CODE)).rejects.toThrow("DB failure");
+    await expect(joinGroup(CODE)).rejects.toThrow("permission denied");
   });
 });
