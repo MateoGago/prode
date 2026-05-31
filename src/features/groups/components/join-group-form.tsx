@@ -70,10 +70,10 @@ export function JoinGroupForm() {
               <FormLabel>Código de invitación</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Código de invitación"
+                  placeholder="7Q9P2K4M"
                   autoComplete="off"
                   autoCapitalize="characters"
-                  className="h-11 font-mono uppercase"
+                  className="h-11 font-mono uppercase tracking-[0.15em] placeholder:tracking-[0.15em] placeholder:text-muted-foreground/50"
                   {...field}
                 />
               </FormControl>

@@ -1,3 +1,4 @@
+import { GroupInviteButton } from "@/features/groups/components/group-invite-button";
 import { resolveActiveGroup } from "@/features/groups/actions/resolve-active-group";
 import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
 import { LeaderboardTable } from "@/features/leaderboard";
@@ -39,17 +40,20 @@ export default async function GroupLeaderboardPage({
 
   return (
     <section className="grid gap-6">
-      <header className="grid gap-1">
-        <h1
-          className={
-            "font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight"
-          }
-        >
-          {group.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Tabla de posiciones del grupo.
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div className="grid gap-1">
+          <h1
+            className={
+              "font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight"
+            }
+          >
+            {group.name}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Tabla de posiciones del grupo.
+          </p>
+        </div>
+        <GroupInviteButton code={code} />
       </header>
 
       <LeaderboardTable
