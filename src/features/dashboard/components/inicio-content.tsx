@@ -29,8 +29,14 @@ export interface TeamView {
 export interface InicioContentProps {
   displayName: string;
   subline: string;
+  /**
+   * When null, the Posición and Puntos StatCards are NOT rendered.
+   * The home hub omits them because position is group-scoped (shown in
+   * GroupCards above); passing null avoids permanently misleading "—"/0 values.
+   */
   position: number | null;
-  points: number;
+  /** Only meaningful when position is non-null. */
+  points?: number;
   played: number;
   totalMatches: number;
   /** Group-stage load progress ("X/72 cargadas") — shared with the nav badge. */
@@ -211,7 +217,7 @@ export function InicioContent({
   displayName,
   subline,
   position,
-  points,
+  points = 0,
   played,
   totalMatches,
   predictionsLoaded,
@@ -244,14 +250,17 @@ export function InicioContent({
         <div className="grid gap-6">
           <motion.div
             variants={rise}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+            className={[
+              "grid gap-3",
+              position !== null ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2",
+            ].join(" ")}
           >
-            <StatCard
-              label="Posición"
-              value={position === null ? "—" : `#${position}`}
-              highlighted
-            />
-            <StatCard label="Puntos" value={String(points)} />
+            {position !== null && (
+              <>
+                <StatCard label="Posición" value={`#${position}`} highlighted />
+                <StatCard label="Puntos" value={String(points)} />
+              </>
+            )}
             <StatCard
               label="Jugados"
               value={String(played)}
@@ -272,10 +281,13 @@ export function InicioContent({
 
         {/* Right column on lg: últimos resultados */}
         <motion.div variants={rise} className="grid gap-3">
-          <SectionHeader
-            title="Últimos resultados"
-            action={{ href: "/tabla", label: "Ver tabla" }}
-          />
+          {/*
+           * "Ver tabla" previously linked to /tabla which now redirects to
+           * /onboarding. The leaderboard lives per-group at
+           * /g/{code}/leaderboard; this hub has no single active-group context,
+           * so the CTA is removed rather than pointing to a dead end.
+           */}
+          <SectionHeader title="Últimos resultados" />
           {lastResults.length > 0 ? (
             <div className="grid gap-2.5">
               {lastResults.map((row) => (
