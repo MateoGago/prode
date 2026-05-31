@@ -34,6 +34,18 @@ export function GroupNav() {
   );
 }
 
+/**
+ * BoardGroupNav — view-aware wrapper that renders GroupNav only in the "Etapa"
+ * view. The chip row is a group-stage affordance; the "Día" view has no chip
+ * nav. Kept separate from GroupNav so GroupNav stays a pure, always-render chip
+ * row (its unit tests render it directly under the default provider).
+ */
+export function BoardGroupNav() {
+  const { viewMode } = usePredictionsBoard();
+  if (viewMode !== "etapa") return null;
+  return <GroupNav />;
+}
+
 // ---------------------------------------------------------------------------
 // GroupChip — individual chip per group
 // ---------------------------------------------------------------------------

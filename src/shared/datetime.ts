@@ -81,6 +81,54 @@ export function formatKickoffLong(instant: Date | string): string {
   return `${weekdayTitle} ${day}/${month} · ${hour}:${minute}`;
 }
 
+/**
+ * AR-local calendar-day parts for a UTC instant — the building block for the
+ * "por día" predictions view. Grouping must use the SAME timezone the match
+ * cards display in (formatAR → America/Argentina/Buenos_Aires), so a kickoff
+ * shown at 21:00 ART lands under that ART day, not the UTC one.
+ */
+export interface ArDayParts {
+  /** Sortable, stable day key "YYYY-MM-DD" (AR-local). Used as anchor id + sort key. */
+  key: string;
+  /** Day of month, unpadded (e.g. "11") — fits the section badge. */
+  day: string;
+  /** Capitalized AR weekday (e.g. "Jueves"). */
+  weekday: string;
+  /** Capitalized AR month (e.g. "Junio"). */
+  month: string;
+}
+
+export function arDayParts(instant: Date | string): ArDayParts {
+  const date = typeof instant === "string" ? new Date(instant) : instant;
+
+  // Human parts (weekday/month names) in Spanish, AR-local.
+  const named = new Intl.DateTimeFormat("es-AR", {
+    timeZone: AR_TIMEZONE,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).formatToParts(date);
+
+  const get = (type: string) => named.find((p) => p.type === type)?.value ?? "";
+  const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Machine key "YYYY-MM-DD", AR-local. en-CA renders ISO-ordered numeric dates,
+  // so the string is both stable and lexicographically sortable.
+  const key = new Intl.DateTimeFormat("en-CA", {
+    timeZone: AR_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+
+  return {
+    key,
+    day: get("day"),
+    weekday: titleCase(get("weekday")),
+    month: titleCase(get("month")),
+  };
+}
+
 const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 60 * MS_PER_MINUTE;
 const MS_PER_DAY = 24 * MS_PER_HOUR;

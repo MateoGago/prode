@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  arDayParts,
   formatAR,
   formatCountdown,
   formatKickoffLong,
@@ -95,5 +96,32 @@ describe("formatKickoffLong", () => {
   it("accepts an ISO string and drops leading zeros from the day/month", () => {
     // 2026-06-01 is a Monday; 12:00 UTC → 09:00 ART
     expect(formatKickoffLong("2026-06-01T12:00:00Z")).toBe("Lun 1/6 · 09:00");
+  });
+});
+
+describe("arDayParts", () => {
+  it("returns a sortable AR-local key plus capitalized weekday/month", () => {
+    // 2026-06-11 is a Thursday; 19:00 UTC → 16:00 ART (still June 11).
+    expect(arDayParts(new Date("2026-06-11T19:00:00Z"))).toEqual({
+      key: "2026-06-11",
+      day: "11",
+      weekday: "Jueves",
+      month: "Junio",
+    });
+  });
+
+  it("accepts an ISO string and unpads the day-of-month", () => {
+    // 2026-06-01 is a Monday; 12:00 UTC → 09:00 ART.
+    expect(arDayParts("2026-06-01T12:00:00Z")).toEqual({
+      key: "2026-06-01",
+      day: "1",
+      weekday: "Lunes",
+      month: "Junio",
+    });
+  });
+
+  it("buckets a late-night UTC kickoff into the AR calendar day, not the UTC one", () => {
+    // 00:00 UTC on Jun 12 = 21:00 ART on Jun 11 → belongs to Jun 11.
+    expect(arDayParts(new Date("2026-06-12T00:00:00Z")).key).toBe("2026-06-11");
   });
 });
