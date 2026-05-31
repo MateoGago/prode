@@ -1,9 +1,15 @@
 /**
- * Groups feature barrel.
+ * Groups feature barrel — server-safe exports only.
  *
- * PR1: entities only.
- * PR2: actions added.
- * PR4: components added.
+ * Exports: pure entities + server actions.
+ * Client components ("use client") are intentionally excluded to prevent
+ * the client graph from being pulled into Server Component bundles (Audit R-2).
+ * Import client components directly from their paths:
+ *   @/features/groups/components/create-group-form
+ *   @/features/groups/components/join-group-form
+ *   @/features/groups/components/onboarding
+ *   @/features/groups/components/group-switcher
+ *   @/features/groups/components/group-card
  */
 
 // Entities
@@ -27,10 +33,3 @@ export { resolveActiveGroup } from "./actions/resolve-active-group";
 
 export type { GroupSummary } from "./actions/list-my-groups";
 export { listMyGroups } from "./actions/list-my-groups";
-
-// Components
-export { CreateGroupForm } from "./components/create-group-form";
-export { JoinGroupForm } from "./components/join-group-form";
-export { OnboardingContent } from "./components/onboarding";
-export { GroupSwitcher } from "./components/group-switcher";
-export { GroupCard } from "./components/group-card";
