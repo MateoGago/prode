@@ -45,6 +45,13 @@ export function GroupSwitcher({ groups, activeCode }: GroupSwitcherProps) {
           </Link>
         );
       })}
+
+      <Link
+        href="/onboarding"
+        className="rounded-pill border border-dashed border-border px-4 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+      >
+        + Nuevo
+      </Link>
     </nav>
   );
 }

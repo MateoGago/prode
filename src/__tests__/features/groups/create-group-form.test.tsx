@@ -27,15 +27,20 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: mockToastError } }));
 
+// Stub the share affordance — its own test covers copy/WhatsApp.
+vi.mock("@/features/groups/components/invite-code-share", () => ({
+  InviteCodeShare: ({ code }: { code: string }) => (
+    <div data-testid="invite-code-share">{code}</div>
+  ),
+}));
+
 import { CreateGroupForm } from "@/features/groups/components/create-group-form";
 
 describe("CreateGroupForm", () => {
   it("renders the group name input and submit button", () => {
     render(<CreateGroupForm />);
 
-    expect(
-      screen.getByPlaceholderText(/nombre del grupo/i),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/nombre del grupo/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /crear grupo/i }),
     ).toBeInTheDocument();
@@ -47,10 +52,7 @@ describe("CreateGroupForm", () => {
 
     render(<CreateGroupForm />);
 
-    await user.type(
-      screen.getByPlaceholderText(/nombre del grupo/i),
-      "Los Cracks",
-    );
+    await user.type(screen.getByLabelText(/nombre del grupo/i), "Los Cracks");
     await user.click(screen.getByRole("button", { name: /crear grupo/i }));
 
     await waitFor(() => {
@@ -58,21 +60,38 @@ describe("CreateGroupForm", () => {
     });
   });
 
-  it("redirects to /g/{code}/leaderboard on success", async () => {
+  it("shows the invite code on success instead of redirecting", async () => {
     mockCreateGroup.mockResolvedValue({ ok: true, code: "XYZ98765" });
     const user = userEvent.setup();
 
     render(<CreateGroupForm />);
 
-    await user.type(
-      screen.getByPlaceholderText(/nombre del grupo/i),
-      "Mi grupo",
-    );
+    await user.type(screen.getByLabelText(/nombre del grupo/i), "Mi grupo");
     await user.click(screen.getByRole("button", { name: /crear grupo/i }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/g/XYZ98765/leaderboard");
+      expect(screen.getByTestId("invite-code-share")).toHaveTextContent(
+        "XYZ98765",
+      );
     });
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("navigates to the group when clicking 'Ir al grupo'", async () => {
+    mockCreateGroup.mockResolvedValue({ ok: true, code: "XYZ98765" });
+    const user = userEvent.setup();
+
+    render(<CreateGroupForm />);
+
+    await user.type(screen.getByLabelText(/nombre del grupo/i), "Mi grupo");
+    await user.click(screen.getByRole("button", { name: /crear grupo/i }));
+
+    const goButton = await screen.findByRole("button", {
+      name: /ir al grupo/i,
+    });
+    await user.click(goButton);
+
+    expect(mockPush).toHaveBeenCalledWith("/g/XYZ98765/leaderboard");
   });
 
   it("shows error toast when action returns ok: false", async () => {
@@ -81,7 +100,7 @@ describe("CreateGroupForm", () => {
 
     render(<CreateGroupForm />);
 
-    await user.type(screen.getByPlaceholderText(/nombre del grupo/i), "x");
+    await user.type(screen.getByLabelText(/nombre del grupo/i), "x");
     await user.click(screen.getByRole("button", { name: /crear grupo/i }));
 
     await waitFor(() => {

@@ -3,45 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createGroup } from "@/features/groups/actions/create-group";
 
 // ── Supabase server mock ──────────────────────────────────────────────────────
-// groups.insert().select("id").single() chain
-const {
-  mockGetUser,
-  mockFrom,
-  mockInsertGroupsSingle,
-  mockInsertGroupsSelect,
-  mockInsertGroups,
-  mockInsertMembers,
-} = vi.hoisted(() => {
-  const mockInsertGroupsSingle = vi.fn();
-  const mockInsertGroupsSelect = vi
-    .fn()
-    .mockReturnValue({ single: mockInsertGroupsSingle });
-  const mockInsertGroups = vi
-    .fn()
-    .mockReturnValue({ select: mockInsertGroupsSelect });
-
-  const mockInsertMembers = vi.fn();
-  const mockFrom = vi.fn((table: string) => {
-    if (table === "groups") {
-      return { insert: mockInsertGroups };
-    }
-    return { insert: mockInsertMembers };
-  });
-  const mockGetUser = vi.fn();
-  return {
-    mockGetUser,
-    mockFrom,
-    mockInsertGroupsSingle,
-    mockInsertGroupsSelect,
-    mockInsertGroups,
-    mockInsertMembers,
-  };
-});
+// createGroup now delegates to the atomic create_group(p_name, p_invite_code)
+// SECURITY DEFINER RPC, which inserts the group + auto-enrolls the owner in one
+// transaction. The action only sees { data, error } from supabase.rpc(...).
+const { mockGetUser, mockRpc } = vi.hoisted(() => ({
+  mockGetUser: vi.fn(),
+  mockRpc: vi.fn(),
+}));
 
 vi.mock("@/shared/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({
     auth: { getUser: mockGetUser },
-    from: mockFrom,
+    rpc: mockRpc,
   }),
 }));
 
@@ -51,33 +24,21 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const USER_ID = "user-abc";
 const GROUP_ID = "group-xyz";
+const INVITE_CODE_RE = /^[0-9A-HJKMNP-TV-Z]{8}$/;
 
 describe("createGroup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: USER_ID } },
-    });
-    // Default success: group insert returns id
-    mockInsertGroupsSingle.mockResolvedValue({
-      data: { id: GROUP_ID },
-      error: null,
-    });
-    // Re-wire chain after clearAllMocks
-    mockInsertGroupsSelect.mockReturnValue({ single: mockInsertGroupsSingle });
-    mockInsertGroups.mockReturnValue({ select: mockInsertGroupsSelect });
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "groups") return { insert: mockInsertGroups };
-      return { insert: mockInsertMembers };
-    });
-    mockInsertMembers.mockResolvedValue({ error: null });
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } });
+    // Default success: RPC returns the new group id.
+    mockRpc.mockResolvedValue({ data: GROUP_ID, error: null });
   });
 
   it("returns { ok: false, reason: 'empty_name' } for empty name", async () => {
     const result = await createGroup("   ");
 
     expect(result).toEqual({ ok: false, reason: "empty_name" });
-    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("returns { ok: false, reason: 'unauthenticated' } when no user", async () => {
@@ -86,34 +47,17 @@ describe("createGroup", () => {
     const result = await createGroup("Mi grupo");
 
     expect(result).toEqual({ ok: false, reason: "unauthenticated" });
-    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("inserts group row with generated invite_code and owner_id", async () => {
-    const result = await createGroup("Mi grupo");
+  it("calls create_group RPC with trimmed name and a generated invite_code", async () => {
+    const result = await createGroup("  Mi grupo  ");
 
     expect(result).toMatchObject({ ok: true });
-    expect(mockFrom).toHaveBeenCalledWith("groups");
-    expect(mockInsertGroups).toHaveBeenCalledWith(
-      expect.objectContaining({
-        owner_id: USER_ID,
-        name: "Mi grupo",
-        invite_code: expect.stringMatching(/^[0-9A-HJKMNP-TV-Z]{8}$/),
-      }),
-    );
-  });
-
-  it("inserts creator into group_members after group insert", async () => {
-    const result = await createGroup("Mi grupo");
-
-    expect(result).toMatchObject({ ok: true });
-    expect(mockFrom).toHaveBeenCalledWith("group_members");
-    expect(mockInsertMembers).toHaveBeenCalledWith(
-      expect.objectContaining({
-        group_id: GROUP_ID,
-        user_id: USER_ID,
-      }),
-    );
+    expect(mockRpc).toHaveBeenCalledWith("create_group", {
+      p_name: "Mi grupo",
+      p_invite_code: expect.stringMatching(INVITE_CODE_RE),
+    });
   });
 
   it("returns { ok: true, code } with valid invite code on success", async () => {
@@ -121,7 +65,7 @@ describe("createGroup", () => {
 
     expect(result).toMatchObject({
       ok: true,
-      code: expect.stringMatching(/^[0-9A-HJKMNP-TV-Z]{8}$/),
+      code: expect.stringMatching(INVITE_CODE_RE),
     });
   });
 
@@ -130,16 +74,15 @@ describe("createGroup", () => {
       code: "23505",
       message: "duplicate key value violates unique constraint",
     };
-    // First two attempts fail, third succeeds
-    mockInsertGroupsSingle
+    mockRpc
       .mockResolvedValueOnce({ data: null, error: uniqueError })
       .mockResolvedValueOnce({ data: null, error: uniqueError })
-      .mockResolvedValueOnce({ data: { id: GROUP_ID }, error: null });
+      .mockResolvedValueOnce({ data: GROUP_ID, error: null });
 
     const result = await createGroup("Los cracks");
 
     expect(result).toMatchObject({ ok: true });
-    expect(mockInsertGroupsSingle).toHaveBeenCalledTimes(3);
+    expect(mockRpc).toHaveBeenCalledTimes(3);
   });
 
   it("returns { ok: false, reason: 'code_collision' } after 3 retries", async () => {
@@ -147,19 +90,16 @@ describe("createGroup", () => {
       code: "23505",
       message: "duplicate key value violates unique constraint",
     };
-    mockInsertGroupsSingle.mockResolvedValue({
-      data: null,
-      error: uniqueError,
-    });
+    mockRpc.mockResolvedValue({ data: null, error: uniqueError });
 
     const result = await createGroup("Los cracks");
 
     expect(result).toEqual({ ok: false, reason: "code_collision" });
-    expect(mockInsertGroupsSingle).toHaveBeenCalledTimes(3);
+    expect(mockRpc).toHaveBeenCalledTimes(3);
   });
 
-  it("throws on unexpected DB error during group insert", async () => {
-    mockInsertGroupsSingle.mockResolvedValue({
+  it("throws on unexpected DB error from the RPC", async () => {
+    mockRpc.mockResolvedValue({
       data: null,
       error: { code: "ZZZZZ", message: "Unexpected DB error" },
     });

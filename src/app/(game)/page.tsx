@@ -1,3 +1,5 @@
+import { Plus } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getDashboard } from "@/features/dashboard";
@@ -48,39 +50,49 @@ export default async function HomePage() {
         }
       : null;
 
-  return (
-    <>
-      {/* Per-group cards — position and points are group-scoped (decision B) */}
-      <section className="grid gap-3">
+  // Per-group standings — position/points are group-scoped (decision B).
+  // Rendered by InicioContent right under the greeting (groupsSlot).
+  const groupsSection = (
+    <section className="grid gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="font-heading text-[17px] font-bold tracking-tight">
           {groups.length === 1 ? "Tu grupo" : "Tus grupos"}
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {groups.map((group) => (
-            <GroupCard
-              key={group.groupId}
-              groupName={group.name}
-              position={group.position}
-              points={group.points}
-              leaderboardHref={`/g/${group.inviteCode}/leaderboard`}
-            />
-          ))}
-        </div>
-      </section>
+        <Link
+          href="/onboarding"
+          className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[13px] font-semibold text-primary transition-colors hover:bg-primary-soft"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          Nuevo grupo
+        </Link>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {groups.map((group) => (
+          <GroupCard
+            key={group.groupId}
+            groupName={group.name}
+            position={group.position}
+            points={group.points}
+            leaderboardHref={`/g/${group.inviteCode}/leaderboard`}
+          />
+        ))}
+      </div>
+    </section>
+  );
 
-      {/* Rest of the dashboard — próximo partido, cargadas, últimos resultados */}
-      {/* position omitted — group-scoped stats are shown in GroupCards above */}
-      <InicioContent
-        displayName={displayName}
-        subline={subline}
-        position={null}
-        played={dashboard.played}
-        totalMatches={dashboard.totalMatches}
-        predictionsLoaded={dashboard.predictionsProgress.loaded}
-        predictionsTotal={dashboard.predictionsProgress.total}
-        nextMatch={nextMatch}
-        lastResults={dashboard.lastResults}
-      />
-    </>
+  // position omitted — group-scoped stats live in the GroupCards above.
+  return (
+    <InicioContent
+      displayName={displayName}
+      subline={subline}
+      groupsSlot={groupsSection}
+      position={null}
+      played={dashboard.played}
+      totalMatches={dashboard.totalMatches}
+      predictionsLoaded={dashboard.predictionsProgress.loaded}
+      predictionsTotal={dashboard.predictionsProgress.total}
+      nextMatch={nextMatch}
+      lastResults={dashboard.lastResults}
+    />
   );
 }

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -20,6 +20,8 @@ import {
 } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 
+import { InviteCodeShare } from "./invite-code-share";
+
 const createGroupSchema = z.object({
   name: z.string().trim().min(1, { message: "El nombre no puede estar vacío" }),
 });
@@ -29,6 +31,9 @@ type CreateGroupInput = z.infer<typeof createGroupSchema>;
 export function CreateGroupForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  // On success we hold the new invite code and show a share step instead of
+  // redirecting blind — the code is what makes the group usable.
+  const [createdCode, setCreatedCode] = useState<string | null>(null);
 
   const form = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema),
@@ -50,8 +55,37 @@ export function CreateGroupForm() {
         return;
       }
 
-      router.push(`/g/${result.code}/leaderboard`);
+      setCreatedCode(result.code);
     });
+  }
+
+  if (createdCode) {
+    return (
+      <div className="grid gap-4 text-center">
+        <div className="grid gap-1">
+          <span aria-hidden="true" className="text-3xl">
+            🎉
+          </span>
+          <h2 className="font-heading text-lg font-bold tracking-tight">
+            ¡Grupo creado!
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Compartí el código para que se sumen tus amigos.
+          </p>
+        </div>
+
+        <InviteCodeShare code={createdCode} />
+
+        <Button
+          type="button"
+          variant="pop-ghost"
+          className="h-11 w-full text-sm font-semibold"
+          onClick={() => router.push(`/g/${createdCode}/leaderboard`)}
+        >
+          Ir al grupo
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -69,7 +103,7 @@ export function CreateGroupForm() {
               <FormLabel>Nombre del grupo</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Nombre del grupo"
+                  placeholder="Ej: Los del asado"
                   autoComplete="off"
                   className="h-11"
                   {...field}

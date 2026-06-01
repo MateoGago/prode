@@ -82,6 +82,38 @@ CREATE POLICY gm_insert_self ON public.group_members FOR INSERT TO authenticated
   WITH CHECK (user_id = (select auth.uid()));
 
 -- ============================================================
+-- GROUP CREATION: atomic create + auto-enroll owner.
+-- SECURITY DEFINER so the owner's membership row exists before any RLS-bound
+-- read (otherwise INSERT ... RETURNING trips the membership-gated SELECT policy)
+-- AND so the two inserts are atomic — a failure on the second never leaves an
+-- orphan group. Caller (create-group.ts) retries on 23505 (invite_code clash).
+-- ============================================================
+
+CREATE FUNCTION public.create_group(p_name text, p_invite_code text)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  v_uid      uuid := (select auth.uid());
+  v_group_id uuid;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not authenticated' USING ERRCODE = '42501';
+  END IF;
+
+  INSERT INTO public.groups (owner_id, name, invite_code)
+  VALUES (v_uid, btrim(p_name), p_invite_code)
+  RETURNING id INTO v_group_id;
+
+  INSERT INTO public.group_members (group_id, user_id)
+  VALUES (v_group_id, v_uid);
+
+  RETURN v_group_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_group(text, text) FROM anon, public;
+GRANT  EXECUTE ON FUNCTION public.create_group(text, text) TO authenticated;
+
+-- ============================================================
 -- LEADERBOARD: rewritten to require p_group_id, internal self-gate
 -- ============================================================
 

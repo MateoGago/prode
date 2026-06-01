@@ -3,11 +3,13 @@
 /**
  * createGroup — validates and persists a new group with the creator as owner.
  *
- * Thin I/O shell: delegates name validation to pure entity, generates invite
- * code (retries up to 3 times on unique-constraint collision), inserts the
- * group row (returning the new id via .select), then auto-enrolls the creator
- * in group_members. Returns a discriminated union — never throws on domain
- * failures.
+ * Thin I/O shell: delegates name validation to the pure entity, generates an
+ * invite code (retries up to 3 times on unique-constraint collision), and calls
+ * the atomic `create_group(p_name, p_invite_code)` SECURITY DEFINER RPC. That
+ * function inserts the group AND auto-enrolls the owner in group_members within
+ * a single transaction — so there are no orphan groups, and the owner's first
+ * read is never blocked by the membership-gated SELECT policy. Returns a
+ * discriminated union — never throws on domain failures.
  */
 
 import { revalidatePath } from "next/cache";
@@ -38,25 +40,17 @@ export async function createGroup(name: string): Promise<CreateGroupResult> {
     return { ok: false, reason: "unauthenticated" };
   }
 
-  let groupId: string | null = null;
-  let inviteCode = "";
-
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    inviteCode = generateInviteCode();
+    const inviteCode = generateInviteCode();
 
-    const { data, error } = await supabase
-      .from("groups")
-      .insert({
-        owner_id: user.id,
-        name: name.trim(),
-        invite_code: inviteCode,
-      })
-      .select("id")
-      .single();
+    const { error } = await supabase.rpc("create_group", {
+      p_name: name.trim(),
+      p_invite_code: inviteCode,
+    });
 
     if (!error) {
-      groupId = (data as { id: string }).id;
-      break;
+      revalidatePath("/");
+      return { ok: true, code: inviteCode };
     }
 
     if (error.code !== UNIQUE_VIOLATION) {
@@ -65,18 +59,5 @@ export async function createGroup(name: string): Promise<CreateGroupResult> {
     // Unique collision on invite_code — retry with a fresh code.
   }
 
-  if (!groupId) {
-    return { ok: false, reason: "code_collision" };
-  }
-
-  const { error: memberErr } = await supabase
-    .from("group_members")
-    .insert({ group_id: groupId, user_id: user.id });
-
-  if (memberErr) {
-    throw new Error(memberErr.message);
-  }
-
-  revalidatePath("/");
-  return { ok: true, code: inviteCode };
+  return { ok: false, reason: "code_collision" };
 }

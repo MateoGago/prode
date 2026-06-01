@@ -33,9 +33,7 @@ describe("JoinGroupForm", () => {
   it("renders the invite code input and submit button", () => {
     render(<JoinGroupForm />);
 
-    expect(
-      screen.getByPlaceholderText(/código de invitación/i),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/código de invitación/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /unirme/i })).toBeInTheDocument();
   });
 
@@ -45,10 +43,7 @@ describe("JoinGroupForm", () => {
 
     render(<JoinGroupForm />);
 
-    await user.type(
-      screen.getByPlaceholderText(/código de invitación/i),
-      "ABC12345",
-    );
+    await user.type(screen.getByLabelText(/código de invitación/i), "ABC12345");
     await user.click(screen.getByRole("button", { name: /unirme/i }));
 
     await waitFor(() => {
@@ -62,10 +57,7 @@ describe("JoinGroupForm", () => {
 
     render(<JoinGroupForm />);
 
-    await user.type(
-      screen.getByPlaceholderText(/código de invitación/i),
-      "XYZ98765",
-    );
+    await user.type(screen.getByLabelText(/código de invitación/i), "XYZ98765");
     await user.click(screen.getByRole("button", { name: /unirme/i }));
 
     await waitFor(() => {
@@ -79,10 +71,7 @@ describe("JoinGroupForm", () => {
 
     render(<JoinGroupForm />);
 
-    await user.type(
-      screen.getByPlaceholderText(/código de invitación/i),
-      "BADCODE1",
-    );
+    await user.type(screen.getByLabelText(/código de invitación/i), "BADCODE1");
     await user.click(screen.getByRole("button", { name: /unirme/i }));
 
     await waitFor(() => {
@@ -98,10 +87,7 @@ describe("JoinGroupForm", () => {
 
     render(<JoinGroupForm />);
 
-    await user.type(
-      screen.getByPlaceholderText(/código de invitación/i),
-      "BADCODE1",
-    );
+    await user.type(screen.getByLabelText(/código de invitación/i), "BADCODE1");
     await user.click(screen.getByRole("button", { name: /unirme/i }));
 
     await waitFor(() => {

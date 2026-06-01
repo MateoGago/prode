@@ -17,7 +17,7 @@
  */
 
 import { cache } from "react";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/shared/supabase/server";
 import type { Group } from "../entities/membership";
 
@@ -42,7 +42,9 @@ export const resolveActiveGroup = cache(async function resolveActiveGroup(
   }
 
   if (!row) {
-    notFound();
+    // Standalone chrome-less 404 (outside the (game) shell) instead of
+    // notFound(), which would render wrapped by the app sidebar.
+    redirect("/grupo-no-encontrado");
   }
 
   const {

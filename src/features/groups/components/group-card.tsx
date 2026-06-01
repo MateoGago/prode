@@ -1,6 +1,5 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
 interface GroupCardProps {
   groupName: string;
@@ -18,34 +17,32 @@ export function GroupCard({
   return (
     <Link
       href={leaderboardHref}
-      className="block transition-opacity hover:opacity-80"
+      className="group flex items-center justify-between gap-3 rounded-xl bg-card p-4 shadow-card ring-1 ring-foreground/10 transition-[box-shadow,transform] hover:ring-primary/40"
     >
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{groupName}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                Posición
-              </span>
-              <span className="font-mono text-2xl font-bold tabular-nums">
-                {position === null ? "—" : `#${position}`}
-              </span>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                Puntos
-              </span>
-              <span className="font-mono text-2xl font-bold tabular-nums">
-                {points}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="min-w-0">
+        <div className="truncate font-heading text-sm font-bold tracking-tight">
+          {groupName}
+        </div>
+        <div className="mt-1.5 flex items-baseline gap-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+            Pos{" "}
+            <b className="font-mono text-sm font-bold text-foreground">
+              {position === null ? "—" : `#${position}`}
+            </b>
+          </span>
+          <span className="h-3 w-px self-center bg-border" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+            Pts{" "}
+            <b className="font-mono text-sm font-bold text-foreground tabular-nums">
+              {points}
+            </b>
+          </span>
+        </div>
+      </div>
+      <ChevronRight
+        className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+        aria-hidden="true"
+      />
     </Link>
   );
 }
