@@ -88,10 +88,17 @@ export function ProgressHeader() {
               {" cargados"}
             </p>
             <div className="mt-[3px] flex flex-wrap items-center gap-[7px] text-[12.5px] text-muted-foreground">
-              <span>
-                {"Te faltan "}
-                <strong className="text-foreground">{faltan}</strong>
-              </span>
+              {faltan > 0 ? (
+                <span>
+                  {"Te faltan "}
+                  <strong className="text-foreground">{faltan}</strong>
+                </span>
+              ) : (
+                // Nothing left you can still load (the rest is locked/closed).
+                <span className="font-semibold text-primary-deep">
+                  Estás al día
+                </span>
+              )}
               {cierranHoy > 0 && (
                 <span className="inline-flex items-center gap-[5px] font-bold text-warn-deep">
                   {"·"}

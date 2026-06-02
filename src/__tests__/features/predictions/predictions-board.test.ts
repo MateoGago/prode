@@ -10,7 +10,10 @@ import {
   isDirty,
   selectBatch,
 } from "@/features/predictions/entities/predictions-board";
-import type { LockInfo } from "@/features/predictions/entities/predictions-board";
+import type {
+  BoardMatch,
+  LockInfo,
+} from "@/features/predictions/entities/predictions-board";
 import type { PredictionInput } from "@/features/predictions/entities/prediction";
 
 // ---------------------------------------------------------------------------
@@ -105,6 +108,22 @@ describe("deriveProgress (REQ-01)", () => {
     ];
     const result = deriveProgress(otherDayMatches, {}, now);
     expect(result.cierranHoy).toBe(0);
+  });
+
+  it("faltan excludes locked matches (confirmed status or past kickoff)", () => {
+    const now = new Date("2026-06-15T12:00:00.000Z");
+    const future = new Date("2026-06-20T18:00:00.000Z");
+    const past = new Date("2026-06-10T18:00:00.000Z");
+    const matches: BoardMatch[] = [
+      { id: "open1", kickoffAt: future, status: "scheduled" },
+      { id: "open2", kickoffAt: future, status: "scheduled" },
+      { id: "confirmed1", kickoffAt: future, status: "confirmed" }, // locked by status
+      { id: "past1", kickoffAt: past }, // locked by kickoff (no status)
+    ];
+    const result = deriveProgress(matches, {}, now);
+    // Only the two still-open, unsaved matches are "faltan".
+    expect(result.faltan).toBe(2);
+    expect(result.total).toBe(4);
   });
 });
 
