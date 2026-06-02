@@ -261,9 +261,20 @@
       ),
       radial-gradient(100% 60% at 90% 110%, var(--gol-soft) 0%, transparent 50%);
     background-attachment: fixed;
+    /*
+     * The page must NEVER scroll horizontally — only inner table/chip rows may
+     * (they opt in with their own `overflow-x-auto`). `clip` (not `hidden`)
+     * enforces this without creating a scroll container, so sticky headers and
+     * the fixed mobile tab bar keep working. On iOS a horizontally scrollable
+     * page widens the layout viewport, which is what pushes `position: fixed;
+     * bottom-0` off the bottom and leaves a gap under the tab bar — clipping the
+     * overflow here fixes both symptoms at the root.
+     */
+    overflow-x: clip;
   }
   html {
     @apply font-sans;
+    overflow-x: clip;
   }
 }
 
