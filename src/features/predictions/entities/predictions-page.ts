@@ -209,3 +209,24 @@ export function groupMatchesByDay(matches: Match[]): DayBlock[] {
 
 /** Local alias so the map value stays self-documenting without re-importing. */
 type ArDayPartsLike = ReturnType<typeof arDayParts>;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether a day section should render collapsed by default in the "Día" view.
+ *
+ * Rule (per UX request): days strictly BEFORE yesterday start collapsed; today
+ * and yesterday stay open, and future days stay open. Comparison is done on the
+ * AR-local "YYYY-MM-DD" key (lexicographically sortable), so the boundary is
+ * resolved in America/Argentina/Buenos_Aires — never the server's UTC day.
+ *
+ * Pure: the caller owns `now` (a single client-side `new Date()` per render),
+ * which keeps it trivially testable and consistent across all sections.
+ */
+export function shouldCollapseDayByDefault(
+  dateKey: string,
+  now: Date,
+): boolean {
+  const yesterdayKey = arDayParts(new Date(now.getTime() - MS_PER_DAY)).key;
+  return dateKey < yesterdayKey;
+}

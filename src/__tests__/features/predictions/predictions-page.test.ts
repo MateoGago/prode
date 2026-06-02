@@ -9,6 +9,7 @@ import {
   type MatchWithTeamsRow,
   normalizeTeamRelation,
   type PredictionReadRow,
+  shouldCollapseDayByDefault,
   type TeamJoinRow,
 } from "@/features/predictions/entities/predictions-page";
 
@@ -260,5 +261,34 @@ describe("groupMatchesByDay", () => {
     const days = groupMatchesByDay([groupMatch({ id: "ko", round: "r16" })]);
 
     expect(days.flatMap((d) => d.matches.map((m) => m.id))).toEqual(["ko"]);
+  });
+});
+
+describe("shouldCollapseDayByDefault", () => {
+  // now = 2026-06-15 09:00 ART (12:00 UTC). AR today = 15, AR yesterday = 14.
+  const now = new Date("2026-06-15T12:00:00.000Z");
+
+  it("keeps today expanded", () => {
+    expect(shouldCollapseDayByDefault("2026-06-15", now)).toBe(false);
+  });
+
+  it("keeps yesterday expanded", () => {
+    expect(shouldCollapseDayByDefault("2026-06-14", now)).toBe(false);
+  });
+
+  it("collapses days before yesterday", () => {
+    expect(shouldCollapseDayByDefault("2026-06-13", now)).toBe(true);
+    expect(shouldCollapseDayByDefault("2026-06-01", now)).toBe(true);
+  });
+
+  it("keeps future days expanded", () => {
+    expect(shouldCollapseDayByDefault("2026-06-20", now)).toBe(false);
+  });
+
+  it("uses the AR calendar day, not UTC, to resolve 'yesterday'", () => {
+    // 02:00 UTC Jun 15 = 23:00 ART Jun 14 → AR today = 14, AR yesterday = 13.
+    const lateNight = new Date("2026-06-15T02:00:00.000Z");
+    expect(shouldCollapseDayByDefault("2026-06-13", lateNight)).toBe(false); // yesterday
+    expect(shouldCollapseDayByDefault("2026-06-12", lateNight)).toBe(true); // before
   });
 });
