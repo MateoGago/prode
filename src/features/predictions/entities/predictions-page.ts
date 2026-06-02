@@ -7,11 +7,12 @@
  * TeamRow/MatchRow are write shapes for seed/sync (home_ref/away_ref, no joins).
  */
 
-import type {
-  Match,
-  MatchStatus,
-  Round,
-  Team,
+import {
+  type Match,
+  type MatchStatus,
+  type Round,
+  ROUND_MULTIPLIERS,
+  type Team,
 } from "@/features/fixtures/entities/match";
 import { arDayParts } from "@/shared/datetime";
 
@@ -156,6 +157,25 @@ export function groupMatches(matches: Match[]): GroupBlock[] {
 }
 
 /**
+ * The next still-playable match: the soonest-kickoff match that is still
+ * `scheduled` and has both teams resolved. Once the group stage is confirmed
+ * this is the earliest knockout fixture — the page scrolls to it on load so the
+ * user lands on the current stage instead of finished group days. Returns null
+ * when nothing is pending. Pure: ordering is by kickoff instant, no clock.
+ */
+export function selectNextScheduledMatch(matches: Match[]): Match | null {
+  let next: Match | null = null;
+  for (const match of matches) {
+    if (match.status !== "scheduled") continue;
+    if (match.homeTeam === null || match.awayTeam === null) continue;
+    if (next === null || match.kickoffAt.getTime() < next.kickoffAt.getTime()) {
+      next = match;
+    }
+  }
+  return next;
+}
+
+/**
  * A calendar-day bucket for the "por día" predictions view: every match whose
  * AR-local kickoff falls on the same date, with the display parts needed for
  * the day header. `dateKey` doubles as the section anchor id and sort key.
@@ -209,6 +229,69 @@ export function groupMatchesByDay(matches: Match[]): DayBlock[] {
 
 /** Local alias so the map value stays self-documenting without re-importing. */
 type ArDayPartsLike = ReturnType<typeof arDayParts>;
+
+/**
+ * A knockout-round bucket for the "Etapa" view: every resolved match of one
+ * elimination round, with the display label and the per-round points
+ * multiplier (shown as a blue badge).
+ */
+export interface RoundBlock {
+  round: Round;
+  label: string;
+  multiplier: number;
+  matches: Match[];
+}
+
+const KNOCKOUT_ROUND_LABELS: Partial<Record<Round, string>> = {
+  r32: "16avos",
+  r16: "Octavos",
+  qf: "Cuartos",
+  sf: "Semifinal",
+  third_place: "Tercer puesto",
+  final: "Final",
+};
+
+/** Bracket order for stable section ordering in the Etapa view. */
+const KNOCKOUT_ROUND_ORDER: Round[] = [
+  "r32",
+  "r16",
+  "qf",
+  "sf",
+  "third_place",
+  "final",
+];
+
+/**
+ * Group knockout matches by round for the "Etapa" view. Only ROUND matches with
+ * BOTH teams resolved are included — an unresolved slot (still W74 / 3A-B-C…)
+ * stays hidden until it fills. Rounds are returned in bracket order; matches
+ * within a round by kickoff instant.
+ */
+export function groupMatchesByRound(matches: Match[]): RoundBlock[] {
+  const byRound = new Map<Round, Match[]>();
+
+  for (const match of matches) {
+    if (match.round === "group") continue;
+    if (match.homeTeam === null || match.awayTeam === null) continue;
+    const bucket = byRound.get(match.round);
+    if (bucket) {
+      bucket.push(match);
+    } else {
+      byRound.set(match.round, [match]);
+    }
+  }
+
+  return KNOCKOUT_ROUND_ORDER.filter((round) => byRound.has(round)).map(
+    (round) => ({
+      round,
+      label: KNOCKOUT_ROUND_LABELS[round] ?? round,
+      multiplier: ROUND_MULTIPLIERS[round],
+      matches: [...(byRound.get(round) ?? [])].sort(
+        (a, b) => a.kickoffAt.getTime() - b.kickoffAt.getTime(),
+      ),
+    }),
+  );
+}
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
