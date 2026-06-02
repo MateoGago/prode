@@ -11,6 +11,7 @@ import { listMyGroups } from "@/features/groups/actions/list-my-groups";
 import { GroupCard } from "@/features/groups/components/group-card";
 import { formatKickoffLong } from "@/shared/datetime";
 import { createClient } from "@/shared/supabase/server";
+import { Button } from "@/shared/ui/button";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -58,13 +59,12 @@ export default async function HomePage() {
         <h2 className="font-heading text-[17px] font-bold tracking-tight">
           {groups.length === 1 ? "Tu grupo" : "Tus grupos"}
         </h2>
-        <Link
-          href="/onboarding"
-          className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[13px] font-semibold text-primary transition-colors hover:bg-primary-soft"
-        >
-          <Plus className="size-3.5" aria-hidden="true" />
-          Nuevo grupo
-        </Link>
+        <Button asChild variant="pop" size="sm">
+          <Link href="/onboarding">
+            <Plus className="size-3.5" aria-hidden="true" />
+            Nuevo grupo
+          </Link>
+        </Button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => (
