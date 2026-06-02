@@ -43,7 +43,6 @@ export default async function PrediccionesPage() {
       )
     `,
     )
-    .eq("round", "group")
     .order("kickoff_at", { ascending: true });
 
   if (matchesError) {
@@ -63,21 +62,29 @@ export default async function PrediccionesPage() {
   const initialPredictionsByMatchId = buildPredictionsByMatchId(
     (predictionsData ?? []) as PredictionReadRow[],
   );
+
+  // The "Etapa" view + group progress stay group-only (groupMatches filters by
+  // round internally). The "Día" view additionally shows knockout matches whose
+  // teams are already resolved (e.g. the Round of 32 once the groups finish);
+  // unresolved knockout slots (still W74/3A-B-C…) are hidden until they fill.
+  const displayMatches = matches.filter(
+    (m) => m.round === "group" || (m.homeTeam !== null && m.awayTeam !== null),
+  );
   const groups = groupMatches(matches);
-  const days = groupMatchesByDay(matches);
+  const days = groupMatchesByDay(displayMatches);
 
   return (
     <section className="grid gap-6">
       <header className="grid gap-1.5">
         <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-          Fase de grupos
+          Mundial 2026
         </p>
         <h1 className="font-heading text-3xl font-bold tracking-tight">
           Partidos
         </h1>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Cargá y guardá tus resultados partido por partido. Podés avanzar de
-          forma progresiva por grupo y jornada.
+          Cargá y guardá tus resultados partido por partido. Las rondas de
+          eliminación aparecen en la vista por día a medida que se definen.
         </p>
       </header>
 
