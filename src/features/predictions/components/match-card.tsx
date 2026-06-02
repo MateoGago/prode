@@ -73,7 +73,7 @@ const OUTCOME_TEXT: Record<HitType, string> = {
 /** Solid outcome badge on the right of the alert. */
 const OUTCOME_BADGE: Record<HitType, string> = {
   exact: "bg-primary text-primary-foreground",
-  winner: "bg-winner text-[oklch(0.28_0.06_80)]",
+  winner: "bg-winner text-white",
   miss: "bg-destructive text-white",
 };
 
@@ -296,7 +296,10 @@ export function MatchCard({
 
   const message = mapErrorMessage(error);
 
-  const showAdvancer = shouldShowAdvancer(match.round, homeScore, awayScore);
+  // Only offer the penalty-advancer once the user has actually entered a draw —
+  // not on an untouched (empty) card whose 0-0 default merely looks like a tie.
+  const showAdvancer =
+    !isEmpty && shouldShowAdvancer(match.round, homeScore, awayScore);
   const advancerOptions = [match.homeTeam, match.awayTeam].filter(
     (t): t is NonNullable<typeof t> => t !== null,
   );
