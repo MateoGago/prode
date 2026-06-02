@@ -2,10 +2,38 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
+import { UserMinus } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { useReveal } from "@/shared/motion";
+
+export type RemoveMemberHandler = (
+  playerId: string,
+  playerName: string,
+) => void;
+
+/** Small destructive icon button shown in manage mode to kick a member. */
+function RemoveMemberButton({
+  playerId,
+  playerName,
+  onRemove,
+}: {
+  playerId: string;
+  playerName: string;
+  onRemove: RemoveMemberHandler;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onRemove(playerId, playerName)}
+      aria-label={`Echar a ${playerName}`}
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-destructive ring-1 ring-inset ring-destructive/30 transition-colors hover:bg-destructive hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+    >
+      <UserMinus className="size-3.5" aria-hidden="true" />
+    </button>
+  );
+}
 
 export type LeaderboardRow = {
   playerId: string;
@@ -24,6 +52,15 @@ export type LeaderboardTableProps = {
   ariaLabel?: string;
   /** When set, the matching row receives a highlight background and aria-current="true". */
   highlightPlayerId?: string;
+  /**
+   * Manage mode: when true AND the viewer (currentUserId) is the owner
+   * (ownerId), every member EXCEPT the owner gets a remove control wired to
+   * onRemoveMember. The owner can never remove themselves.
+   */
+  manageMode?: boolean;
+  ownerId?: string;
+  currentUserId?: string;
+  onRemoveMember?: RemoveMemberHandler;
 };
 
 type RankedLeaderboardRow = LeaderboardRow & {
@@ -94,9 +131,15 @@ function PodiumAvatar({ name, rank }: { name: string; rank: 1 | 2 | 3 }) {
 function Podium({
   top3,
   highlightPlayerId,
+  canManage,
+  ownerId,
+  onRemoveMember,
 }: {
   top3: [RankedLeaderboardRow, RankedLeaderboardRow, RankedLeaderboardRow];
   highlightPlayerId?: string;
+  canManage?: boolean;
+  ownerId?: string;
+  onRemoveMember?: RemoveMemberHandler;
 }) {
   // Design shows order: 2nd | 1st | 3rd
   const [first, second, third] = top3;
@@ -123,6 +166,8 @@ function Podium({
       {ordered.map((row) => {
         const r = row.rank as 1 | 2 | 3;
         const isOwn = highlightPlayerId === row.playerId;
+        const showRemove =
+          canManage && !!onRemoveMember && row.playerId !== ownerId;
         const columnContent = (
           <>
             <PodiumAvatar name={row.playerName} rank={r} />
@@ -149,6 +194,13 @@ function Podium({
               <div className="flex flex-col items-center gap-2">
                 {columnContent}
               </div>
+            )}
+            {showRemove && onRemoveMember && (
+              <RemoveMemberButton
+                playerId={row.playerId}
+                playerName={row.playerName}
+                onRemove={onRemoveMember}
+              />
             )}
             {/* Bar grows from bottom; CSS animation reuses the shared bargrow keyframe */}
             <div
@@ -189,11 +241,15 @@ function TableRow({
   row,
   isHighlighted,
   rise,
+  showRemove,
+  onRemoveMember,
 }: {
   row: RankedLeaderboardRow;
   isHighlighted: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: motion variant or undefined
   rise: any;
+  showRemove?: boolean;
+  onRemoveMember?: RemoveMemberHandler;
 }) {
   return (
     <motion.tr
@@ -233,7 +289,16 @@ function TableRow({
         )}
       </td>
       <td className="px-3 py-2 text-right font-mono font-bold tabular-nums">
-        {row.totalPoints}
+        <span className="inline-flex items-center justify-end gap-2">
+          {row.totalPoints}
+          {showRemove && onRemoveMember && (
+            <RemoveMemberButton
+              playerId={row.playerId}
+              playerName={row.playerName}
+              onRemove={onRemoveMember}
+            />
+          )}
+        </span>
       </td>
     </motion.tr>
   );
@@ -244,8 +309,18 @@ export function LeaderboardTable({
   emptyMessage,
   ariaLabel = "Tabla de posiciones",
   highlightPlayerId,
+  manageMode,
+  ownerId,
+  currentUserId,
+  onRemoveMember,
 }: LeaderboardTableProps) {
   const { rise, staggerContainer } = useReveal();
+
+  // Only the owner, while manage mode is on, may remove members. Guarding on the
+  // viewer here keeps the control off-limits even if a caller passes manageMode
+  // for a non-owner.
+  const canManage =
+    !!manageMode && !!currentUserId && currentUserId === ownerId;
 
   if (rows.length === 0) {
     return (
@@ -288,7 +363,13 @@ export function LeaderboardTable({
       </CardHeader>
       <CardContent className="px-2 pb-2 pt-0">
         {podiumRows && (
-          <Podium top3={podiumRows} highlightPlayerId={highlightPlayerId} />
+          <Podium
+            top3={podiumRows}
+            highlightPlayerId={highlightPlayerId}
+            canManage={canManage}
+            ownerId={ownerId}
+            onRemoveMember={onRemoveMember}
+          />
         )}
 
         {listRows.length > 0 && (
@@ -330,6 +411,8 @@ export function LeaderboardTable({
                     row={row}
                     isHighlighted={highlightPlayerId === row.playerId}
                     rise={rise}
+                    showRemove={canManage && row.playerId !== ownerId}
+                    onRemoveMember={onRemoveMember}
                   />
                 ))}
               </motion.tbody>

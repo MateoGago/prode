@@ -1,7 +1,7 @@
 import { GroupInviteButton } from "@/features/groups/components/group-invite-button";
+import { GroupLeaderboard } from "@/features/groups/components/group-leaderboard";
 import { resolveActiveGroup } from "@/features/groups/actions/resolve-active-group";
 import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
-import { LeaderboardTable } from "@/features/leaderboard";
 import { createClient } from "@/shared/supabase/server";
 
 /**
@@ -56,9 +56,12 @@ export default async function GroupLeaderboardPage({
         <GroupInviteButton code={code} />
       </header>
 
-      <LeaderboardTable
+      <GroupLeaderboard
         rows={rowsWithHrefs}
-        highlightPlayerId={user?.id}
+        code={code}
+        groupId={groupId}
+        ownerId={group.ownerId}
+        currentUserId={user?.id ?? ""}
         emptyMessage="Todavía no hay puntos en este grupo."
       />
     </section>
