@@ -14,8 +14,9 @@ import { createClient } from "@/shared/supabase/server";
  * check via is_group_member() that the TARGET userId is also a member of the
  * same group, returning 404 if not (REQ-05 gating-by-reachability).
  *
- * getMatchBreakdown(userId) is unchanged — purely per-user data (REQ-05 design
- * decision: no query filter needed, access gate is the page-level check).
+ * getMatchBreakdown(userId, groupId) reads through the get_match_breakdown RPC,
+ * which self-gates on co-membership (the pred_select_own RLS policy would
+ * otherwise return zero rows for any player other than the caller).
  */
 export default async function GroupUserBreakdownPage({
   params,
@@ -54,7 +55,12 @@ export default async function GroupUserBreakdownPage({
   }
 
   const displayName = profileResult.display_name;
-  const items = await getMatchBreakdown(userId);
+  const items = await getMatchBreakdown(userId, groupId);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const subjectIsSelf = user?.id === userId;
 
   return (
     <section className="grid gap-6">
@@ -83,6 +89,7 @@ export default async function GroupUserBreakdownPage({
       <MatchBreakdownList
         items={items}
         emptyMessage="Este jugador todavía no tiene partidos confirmados."
+        subjectIsSelf={subjectIsSelf}
       />
     </section>
   );

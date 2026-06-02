@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { AppSidebarNav, AppTabBar } from "@/features/auth/components/app-nav";
-import { getPredictionsProgress } from "@/features/predictions";
 import { createClient } from "@/shared/supabase/server";
 
 function Wordmark() {
@@ -51,8 +50,6 @@ export default async function GameLayout({
     (user.user_metadata?.display_name as string | undefined) ??
     "Jugador";
 
-  const predictionsProgress = await getPredictionsProgress(user.id);
-
   // Resolve the "Tabla" nav target to the user's first group leaderboard so the
   // item links straight there (no /onboarding redirect hop). RLS scopes the
   // query to groups the user belongs to. Falls back to /onboarding if none.
@@ -73,11 +70,7 @@ export default async function GameLayout({
         <div className="px-2">
           <Wordmark />
         </div>
-        <AppSidebarNav
-          isAdmin={isAdmin}
-          tablaHref={tablaHref}
-          predictionsProgress={predictionsProgress}
-        />
+        <AppSidebarNav isAdmin={isAdmin} tablaHref={tablaHref} />
         <div className="mt-auto grid gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2.5 px-1">
             <span className="truncate text-sm font-medium">{displayName}</span>
@@ -99,11 +92,7 @@ export default async function GameLayout({
         </main>
       </div>
 
-      <AppTabBar
-        isAdmin={isAdmin}
-        tablaHref={tablaHref}
-        predictionsProgress={predictionsProgress}
-      />
+      <AppTabBar isAdmin={isAdmin} tablaHref={tablaHref} />
     </div>
   );
 }

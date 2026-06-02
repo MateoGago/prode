@@ -9,9 +9,10 @@
  * picks which one to lay out.
  */
 
-import type {
-  DayBlock,
-  GroupBlock,
+import {
+  type DayBlock,
+  type GroupBlock,
+  shouldCollapseDayByDefault,
 } from "@/features/predictions/entities/predictions-page";
 
 import { DaySection } from "./day-section";
@@ -26,6 +27,10 @@ export type BoardSectionsProps = {
 export function BoardSections({ groups, days }: BoardSectionsProps) {
   const { viewMode } = usePredictionsBoard();
 
+  // Single client "now" shared across all day sections so the collapse boundary
+  // (days before yesterday start collapsed) is consistent within one render.
+  const now = new Date();
+
   return (
     <div className="grid gap-8 pt-4 pb-44 md:pb-28">
       {viewMode === "dia"
@@ -37,6 +42,7 @@ export function BoardSections({ groups, days }: BoardSectionsProps) {
               weekday={d.weekday}
               month={d.month}
               matches={d.matches}
+              defaultCollapsed={shouldCollapseDayByDefault(d.dateKey, now)}
             />
           ))
         : groups.map((group) => (

@@ -1,9 +1,11 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import Link from "next/link";
 
 import type { GroupSummary } from "@/features/groups/actions/list-my-groups";
 import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
 
 interface GroupSwitcherProps {
   groups: GroupSummary[];
@@ -46,12 +48,12 @@ export function GroupSwitcher({ groups, activeCode }: GroupSwitcherProps) {
         );
       })}
 
-      <Link
-        href="/onboarding"
-        className="rounded-pill border border-dashed border-border px-4 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-      >
-        + Nuevo
-      </Link>
+      <Button asChild variant="pop" size="sm">
+        <Link href="/onboarding">
+          <Plus className="size-3.5" aria-hidden="true" />
+          Nuevo
+        </Link>
+      </Button>
     </nav>
   );
 }

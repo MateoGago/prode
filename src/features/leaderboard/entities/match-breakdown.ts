@@ -12,8 +12,8 @@ export type BreakdownPredictionRow = {
     multiplier?: number | null;
     status?: string | null;
     kickoff_at?: string | null;
-    home_team: { name: string } | null;
-    away_team: { name: string } | null;
+    home_team: { name: string; flag_url?: string | null } | null;
+    away_team: { name: string; flag_url?: string | null } | null;
   } | null;
 };
 
@@ -36,6 +36,10 @@ export function mapMatchBreakdown(
     acc.push({
       matchId: row.match_id,
       matchLabel: `${homeName} vs ${awayName}`,
+      homeTeamName: homeName,
+      awayTeamName: awayName,
+      homeFlagUrl: row.match.home_team?.flag_url ?? null,
+      awayFlagUrl: row.match.away_team?.flag_url ?? null,
       predictedHomeScore,
       predictedAwayScore,
       actualHomeScore,

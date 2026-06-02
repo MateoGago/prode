@@ -47,10 +47,34 @@ const ROUND_LABELS: Record<Round, string> = {
   final: "Final",
 };
 
-const HIT_LABELS: Record<HitType, string> = {
-  exact: "Exacto",
-  winner: "Ganador",
-  miss: "Erró",
+// Outcome vocabulary for a CONFIRMED match, from the player's point of view.
+// Per product decision the colors are: Acertaste=green, Safaste=amber/warning,
+// Perdiste=red — so a miss reads as a loss (red), not a neutral grey.
+const OUTCOME_LABEL: Record<HitType, string> = {
+  exact: "Acertaste",
+  winner: "Safaste",
+  miss: "Perdiste",
+};
+
+/** Soft alert background per outcome. */
+const OUTCOME_PANEL: Record<HitType, string> = {
+  exact: "bg-primary-soft",
+  winner: "bg-warn-soft",
+  miss: "bg-destructive/10",
+};
+
+/** Accent text (the predicted score inside the alert) per outcome. */
+const OUTCOME_TEXT: Record<HitType, string> = {
+  exact: "text-primary-deep",
+  winner: "text-warn-deep",
+  miss: "text-destructive",
+};
+
+/** Solid outcome badge on the right of the alert. */
+const OUTCOME_BADGE: Record<HitType, string> = {
+  exact: "bg-primary text-primary-foreground",
+  winner: "bg-winner text-[oklch(0.28_0.06_80)]",
+  miss: "bg-destructive text-white",
 };
 
 /**
@@ -152,8 +176,47 @@ function TopChips({
   );
 }
 
-/** Confirmed: Vos vs Real + the hit badge. Hit is derived purely from scores. */
-function ConfirmedPanel({
+/**
+ * Read-only team column for a CONFIRMED match: same vertical flag → name →
+ * score layout as the editable card, but the score is the static REAL result
+ * (no steppers). Mirrors the Stepper value size so the scoreboard reads the
+ * same whether you're loading a prediction or looking at the final result.
+ */
+function ConfirmedTeamColumn({
+  name,
+  flagUrl,
+  score,
+  isWinner,
+}: {
+  name: string;
+  flagUrl: string | null;
+  score: number;
+  isWinner: boolean;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center gap-1.5 px-1">
+      <TeamFlag name={name} flagUrl={flagUrl} />
+      <span className="line-clamp-2 text-center text-[13px] font-semibold leading-tight">
+        {name}
+      </span>
+      <span
+        className={cn(
+          "font-mono text-[27px] font-bold leading-none tabular-nums",
+          isWinner ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {score}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Confirmed-match outcome alert: "Tu pronóstico: X–X" on the left and the
+ * outcome verb (Acertaste / Safaste / Perdiste) on the right, tinted by the
+ * hit (green / amber / red). Hit is derived purely from scores.
+ */
+function ResultAlert({
   prediction,
   homeScore,
   awayScore,
@@ -167,40 +230,26 @@ function ConfirmedPanel({
     { homeScore, awayScore },
   );
 
-  const hitClass =
-    hit === "exact"
-      ? "bg-primary text-primary-foreground"
-      : hit === "winner"
-        ? "bg-winner text-[oklch(0.28_0.06_80)]"
-        : "bg-card-muted text-muted-foreground";
-
   return (
-    <div className="mt-3 flex items-center gap-3 rounded-xl bg-primary-soft p-3">
-      <div className="flex items-center gap-3.5">
-        <div className="text-center">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-primary-deep/80">
-            Vos
-          </div>
-          <div className="font-mono text-lg font-bold text-primary-deep">
-            {prediction.homeScore}–{prediction.awayScore}
-          </div>
-        </div>
-        <div className="text-center">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-primary-deep/80">
-            Real
-          </div>
-          <div className="font-mono text-lg font-bold text-primary-deep">
-            {homeScore}–{awayScore}
-          </div>
-        </div>
-      </div>
+    <div
+      className={cn(
+        "mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5",
+        OUTCOME_PANEL[hit],
+      )}
+    >
+      <span className="text-sm font-semibold text-foreground">
+        {"Tu pronóstico: "}
+        <span className={cn("font-mono font-bold", OUTCOME_TEXT[hit])}>
+          {prediction.homeScore}–{prediction.awayScore}
+        </span>
+      </span>
       <span
         className={cn(
-          "ml-auto rounded-lg px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide",
-          hitClass,
+          "flex-none rounded-lg px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide",
+          OUTCOME_BADGE[hit],
         )}
       >
-        {HIT_LABELS[hit]}
+        {OUTCOME_LABEL[hit]}
       </span>
     </div>
   );
@@ -225,6 +274,11 @@ export function MatchCard({
   // Frozen states come straight from the derived cardState (lock authority is
   // Postgres; cardState already folds live/confirmed/locked together).
   const isConfirmed = cardState === "confirmed";
+
+  // A confirmed match the user never predicted: dim the card so it reads as
+  // secondary among the ones that actually scored, but surface the reason in a
+  // clearly visible chip (the old muted <p> was too easy to miss).
+  const isMissedConfirmed = isConfirmed && prediction === null;
 
   // TopChips speaks "open" for every editable state (empty/dirty/saved); the
   // three frozen states pass through unchanged.
@@ -286,46 +340,47 @@ export function MatchCard({
       className={cn(
         "relative overflow-hidden rounded-3xl bg-card p-4 shadow-card",
         cardState === "locked" && "opacity-95",
+        isMissedConfirmed && "bg-card-muted opacity-75",
       )}
     >
       <TopChips match={match} state={chipState} />
 
       {isConfirmed ? (
         <>
-          {/* Two-column flag → name header, same structure as editable states */}
+          {/* Read-only scoreboard with the REAL final score — same flag → name
+              → score layout as the editable card, minus the steppers. */}
           <div className="flex items-center gap-2 py-1">
-            <div className="flex flex-1 flex-col items-center gap-1.5 px-1">
-              <TeamFlag
-                name={homeName}
-                flagUrl={match.homeTeam?.flagUrl ?? null}
-              />
-              <span className="line-clamp-2 text-center text-[13px] font-semibold leading-tight">
-                {homeName}
-              </span>
-            </div>
+            <ConfirmedTeamColumn
+              name={homeName}
+              flagUrl={match.homeTeam?.flagUrl ?? null}
+              score={match.homeScore ?? 0}
+              isWinner={(match.homeScore ?? 0) > (match.awayScore ?? 0)}
+            />
             <span className="font-mono text-base font-bold text-muted-foreground">
               :
             </span>
-            <div className="flex flex-1 flex-col items-center gap-1.5 px-1">
-              <TeamFlag
-                name={awayName}
-                flagUrl={match.awayTeam?.flagUrl ?? null}
-              />
-              <span className="line-clamp-2 text-center text-[13px] font-semibold leading-tight">
-                {awayName}
-              </span>
-            </div>
+            <ConfirmedTeamColumn
+              name={awayName}
+              flagUrl={match.awayTeam?.flagUrl ?? null}
+              score={match.awayScore ?? 0}
+              isWinner={(match.awayScore ?? 0) > (match.homeScore ?? 0)}
+            />
           </div>
           {prediction ? (
-            <ConfirmedPanel
+            <ResultAlert
               prediction={prediction}
               homeScore={match.homeScore ?? 0}
               awayScore={match.awayScore ?? 0}
             />
           ) : (
-            <p className="mt-3 text-sm text-muted-foreground">
-              No pronosticaste este partido.
-            </p>
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-warn-soft px-3 py-2.5">
+              <span className="grid size-5 flex-none place-items-center rounded-full bg-warn text-[11px] font-extrabold text-[oklch(0.28_0.06_80)]">
+                !
+              </span>
+              <span className="text-sm font-semibold text-warn-deep">
+                No pronosticaste este partido
+              </span>
+            </div>
           )}
         </>
       ) : (
