@@ -157,6 +157,25 @@ export function groupMatches(matches: Match[]): GroupBlock[] {
 }
 
 /**
+ * The next still-playable match: the soonest-kickoff match that is still
+ * `scheduled` and has both teams resolved. Once the group stage is confirmed
+ * this is the earliest knockout fixture — the page scrolls to it on load so the
+ * user lands on the current stage instead of finished group days. Returns null
+ * when nothing is pending. Pure: ordering is by kickoff instant, no clock.
+ */
+export function selectNextScheduledMatch(matches: Match[]): Match | null {
+  let next: Match | null = null;
+  for (const match of matches) {
+    if (match.status !== "scheduled") continue;
+    if (match.homeTeam === null || match.awayTeam === null) continue;
+    if (next === null || match.kickoffAt.getTime() < next.kickoffAt.getTime()) {
+      next = match;
+    }
+  }
+  return next;
+}
+
+/**
  * A calendar-day bucket for the "por día" predictions view: every match whose
  * AR-local kickoff falls on the same date, with the display parts needed for
  * the day header. `dateKey` doubles as the section anchor id and sort key.

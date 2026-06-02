@@ -75,7 +75,7 @@ export function DaySection({
   const bodyId = `day-body-${dateKey}`;
 
   return (
-    <section id={dateKey} className="grid gap-3">
+    <section id={dateKey} className="grid scroll-mt-24 gap-3">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}

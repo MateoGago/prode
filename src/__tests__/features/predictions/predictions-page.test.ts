@@ -7,6 +7,7 @@ import {
   groupMatchesByDay,
   groupMatchesByRound,
   mapMatchRow,
+  selectNextScheduledMatch,
   type MatchWithTeamsRow,
   normalizeTeamRelation,
   type PredictionReadRow,
@@ -262,6 +263,55 @@ describe("groupMatchesByDay", () => {
     const days = groupMatchesByDay([groupMatch({ id: "ko", round: "r16" })]);
 
     expect(days.flatMap((d) => d.matches.map((m) => m.id))).toEqual(["ko"]);
+  });
+});
+
+describe("selectNextScheduledMatch", () => {
+  it("returns the soonest-kickoff scheduled match with teams", () => {
+    const next = selectNextScheduledMatch([
+      groupMatch({
+        id: "confirmed-early",
+        status: "confirmed",
+        kickoffAt: new Date("2026-06-11T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "scheduled-late",
+        status: "scheduled",
+        kickoffAt: new Date("2026-07-01T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "scheduled-soon",
+        status: "scheduled",
+        kickoffAt: new Date("2026-06-28T19:00:00.000Z"),
+      }),
+    ]);
+
+    expect(next?.id).toBe("scheduled-soon");
+  });
+
+  it("ignores matches without resolved teams", () => {
+    const next = selectNextScheduledMatch([
+      groupMatch({
+        id: "tbd",
+        status: "scheduled",
+        homeTeam: null,
+        awayTeam: null,
+        kickoffAt: new Date("2026-06-28T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "real",
+        status: "scheduled",
+        kickoffAt: new Date("2026-07-01T19:00:00.000Z"),
+      }),
+    ]);
+
+    expect(next?.id).toBe("real");
+  });
+
+  it("returns null when nothing is scheduled", () => {
+    expect(
+      selectNextScheduledMatch([groupMatch({ id: "a", status: "confirmed" })]),
+    ).toBeNull();
   });
 });
 
