@@ -351,7 +351,7 @@ describe("groupMatchesByRound", () => {
 
     expect(rounds[0]).toMatchObject({
       round: "r32",
-      label: "32avos",
+      label: "16avos",
       multiplier: 1,
     });
     expect(rounds[1]).toMatchObject({

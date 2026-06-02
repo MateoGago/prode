@@ -4,7 +4,7 @@
  * RoundSection — one knockout-round bucket of the "Etapa" board view.
  *
  * Mirrors GroupSection's collapsible chevron header, but keys off an
- * elimination round (32avos, Octavos, …) instead of a group letter, and shows
+ * elimination round (16avos, Octavos, …) instead of a group letter, and shows
  * a blue badge with the round's points multiplier. Only rounds whose matches
  * have resolved teams reach this component (see groupMatchesByRound).
  */
@@ -24,7 +24,7 @@ import { usePredictionsBoard } from "./predictions-provider";
 export type RoundSectionProps = {
   /** Round key — used as the section anchor id. */
   round: string;
-  /** Display label, e.g. "32avos". */
+  /** Display label, e.g. "16avos". */
   label: string;
   /** Per-round points multiplier (blue badge). */
   multiplier: number;

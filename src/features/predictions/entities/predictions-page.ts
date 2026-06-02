@@ -243,7 +243,7 @@ export interface RoundBlock {
 }
 
 const KNOCKOUT_ROUND_LABELS: Partial<Record<Round, string>> = {
-  r32: "32avos",
+  r32: "16avos",
   r16: "Octavos",
   qf: "Cuartos",
   sf: "Semifinal",

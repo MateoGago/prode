@@ -39,7 +39,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const ROUND_LABELS: Record<Round, string> = {
   group: "Fase de grupos",
-  r32: "32avos",
+  r32: "16avos",
   r16: "Octavos",
   qf: "Cuartos",
   sf: "Semifinal",
