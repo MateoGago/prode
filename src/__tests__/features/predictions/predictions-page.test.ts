@@ -5,6 +5,7 @@ import {
   buildPredictionsByMatchId,
   groupMatches,
   groupMatchesByDay,
+  groupMatchesByRound,
   mapMatchRow,
   type MatchWithTeamsRow,
   normalizeTeamRelation,
@@ -261,6 +262,70 @@ describe("groupMatchesByDay", () => {
     const days = groupMatchesByDay([groupMatch({ id: "ko", round: "r16" })]);
 
     expect(days.flatMap((d) => d.matches.map((m) => m.id))).toEqual(["ko"]);
+  });
+});
+
+describe("groupMatchesByRound", () => {
+  it("buckets resolved knockout matches by round in bracket order, skipping group", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({ id: "g1", round: "group" }),
+      groupMatch({ id: "qf1", round: "qf" }),
+      groupMatch({ id: "r32a", round: "r32" }),
+    ]);
+
+    expect(rounds.map((r) => r.round)).toEqual(["r32", "qf"]);
+  });
+
+  it("excludes knockout matches whose teams are not resolved yet", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({ id: "filled", round: "r32" }),
+      groupMatch({
+        id: "tbd",
+        round: "r32",
+        homeTeam: null,
+        awayTeam: null,
+        homePlaceholder: "W74",
+        awayPlaceholder: "W77",
+      }),
+    ]);
+
+    expect(rounds).toHaveLength(1);
+    expect(rounds[0].matches.map((m) => m.id)).toEqual(["filled"]);
+  });
+
+  it("carries the round label and per-round multiplier", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({ id: "r32a", round: "r32" }),
+      groupMatch({ id: "r16a", round: "r16" }),
+    ]);
+
+    expect(rounds[0]).toMatchObject({
+      round: "r32",
+      label: "32avos",
+      multiplier: 1,
+    });
+    expect(rounds[1]).toMatchObject({
+      round: "r16",
+      label: "Octavos",
+      multiplier: 2,
+    });
+  });
+
+  it("orders matches within a round by kickoff instant", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({
+        id: "late",
+        round: "r32",
+        kickoffAt: new Date("2026-06-30T22:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "early",
+        round: "r32",
+        kickoffAt: new Date("2026-06-30T16:00:00.000Z"),
+      }),
+    ]);
+
+    expect(rounds[0].matches.map((m) => m.id)).toEqual(["early", "late"]);
   });
 });
 

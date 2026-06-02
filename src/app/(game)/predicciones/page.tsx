@@ -5,6 +5,7 @@ import {
   buildPredictionsByMatchId,
   groupMatches,
   groupMatchesByDay,
+  groupMatchesByRound,
   mapMatchRow,
   type MatchWithTeamsRow,
   type PredictionReadRow,
@@ -72,6 +73,7 @@ export default async function PrediccionesPage() {
   );
   const groups = groupMatches(matches);
   const days = groupMatchesByDay(displayMatches);
+  const rounds = groupMatchesByRound(matches);
 
   return (
     <section className="grid gap-6">
@@ -91,6 +93,7 @@ export default async function PrediccionesPage() {
       <PredictionsPageClient
         groups={groups}
         days={days}
+        rounds={rounds}
         initialPredictionsByMatchId={initialPredictionsByMatchId}
       />
     </section>
