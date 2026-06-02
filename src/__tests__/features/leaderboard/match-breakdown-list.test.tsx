@@ -11,6 +11,10 @@ const makeItem = (
 ): MatchBreakdownItem => ({
   matchId: "m1",
   matchLabel: "Argentina vs Brazil",
+  homeTeamName: "Argentina",
+  awayTeamName: "Brazil",
+  homeFlagUrl: null,
+  awayFlagUrl: null,
   predictedHomeScore: 2,
   predictedAwayScore: 1,
   actualHomeScore: 2,
@@ -24,7 +28,8 @@ const makeItem = (
 describe("MatchBreakdownList — Cancha Pop (D-8)", () => {
   it("renders the match label for each item", () => {
     render(<MatchBreakdownList items={[makeItem()]} />);
-    expect(screen.getByText("Argentina vs Brazil")).toBeInTheDocument();
+    expect(screen.getByText("Argentina")).toBeInTheDocument();
+    expect(screen.getByText("Brazil")).toBeInTheDocument();
   });
 
   it("shows 'Exacto' badge for an exact hit", () => {
@@ -90,22 +95,39 @@ describe("MatchBreakdownList — Cancha Pop (D-8)", () => {
       makeItem({
         matchId: "m1",
         matchLabel: "Argentina vs Brazil",
+        homeTeamName: "Argentina",
+        awayTeamName: "Brazil",
         hitType: "exact",
       }),
       makeItem({
         matchId: "m2",
         matchLabel: "France vs Germany",
+        homeTeamName: "France",
+        awayTeamName: "Germany",
         hitType: "winner",
       }),
       makeItem({
         matchId: "m3",
         matchLabel: "Spain vs Italy",
+        homeTeamName: "Spain",
+        awayTeamName: "Italy",
         hitType: "miss",
       }),
     ];
     render(<MatchBreakdownList items={items} />);
-    expect(screen.getByText("Argentina vs Brazil")).toBeInTheDocument();
-    expect(screen.getByText("France vs Germany")).toBeInTheDocument();
-    expect(screen.getByText("Spain vs Italy")).toBeInTheDocument();
+    // Each <li> carries aria-label with the combined match label
+    expect(
+      screen.getByRole("listitem", { name: "Argentina vs Brazil" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("listitem", { name: "France vs Germany" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("listitem", { name: "Spain vs Italy" }),
+    ).toBeInTheDocument();
+    // Individual team names are rendered in the DOM
+    expect(screen.getByText("Argentina")).toBeInTheDocument();
+    expect(screen.getByText("France")).toBeInTheDocument();
+    expect(screen.getByText("Spain")).toBeInTheDocument();
   });
 });

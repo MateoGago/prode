@@ -16,8 +16,11 @@ describe("mapMatchBreakdown", () => {
     match: {
       home_score: 3,
       away_score: 0,
-      home_team: { name: "Argentina" },
-      away_team: { name: "Brazil" },
+      home_team: {
+        name: "Argentina",
+        flag_url: "https://flagcdn.com/w40/ar.png",
+      },
+      away_team: { name: "Brazil", flag_url: "https://flagcdn.com/w40/br.png" },
     },
     ...overrides,
   });
@@ -29,6 +32,10 @@ describe("mapMatchBreakdown", () => {
       {
         matchId: "m1",
         matchLabel: "Argentina vs Brazil",
+        homeTeamName: "Argentina",
+        awayTeamName: "Brazil",
+        homeFlagUrl: "https://flagcdn.com/w40/ar.png",
+        awayFlagUrl: "https://flagcdn.com/w40/br.png",
         predictedHomeScore: 2,
         predictedAwayScore: 1,
         actualHomeScore: 3,
