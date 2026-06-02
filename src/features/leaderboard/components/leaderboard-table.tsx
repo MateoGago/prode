@@ -65,10 +65,17 @@ function PodiumAvatar({ name, rank }: { name: string; rank: 1 | 2 | 3 }) {
         ? "bg-gradient-to-br from-[#9aa6c4] to-silver"
         : "bg-gradient-to-br from-bronze to-gol-deep";
 
+  const avatarShadow =
+    rank === 1
+      ? "shadow-[0_3px_0_oklch(0.7_0.14_82),0_6px_12px_-4px_oklch(0.7_0.14_82/0.4)]"
+      : rank === 2
+        ? "shadow-[0_3px_0_oklch(0.66_0.012_250),0_6px_12px_-4px_oklch(0.66_0.012_250/0.4)]"
+        : "shadow-[0_3px_0_oklch(0.56_0.10_50),0_6px_12px_-4px_oklch(0.56_0.10_50/0.4)]";
+
   return (
     <div
       aria-hidden="true"
-      className={`relative grid size-12 shrink-0 place-items-center rounded-full text-lg font-bold text-white shadow-card ${avatarClass}`}
+      className={`relative grid size-12 shrink-0 place-items-center rounded-full text-lg font-bold text-white ring-1 ring-inset ring-black/10 ${avatarClass} ${avatarShadow}`}
     >
       {rank === 1 && (
         <span
@@ -101,10 +108,11 @@ function Podium({
     3: "h-[84px]",
   };
 
-  const barGradient: Record<1 | 2 | 3, string> = {
-    1: "bg-gradient-to-b from-gold to-[oklch(0.74_0.13_82)]",
-    2: "bg-gradient-to-b from-silver to-[oklch(0.72_0.012_250)]",
-    3: "bg-gradient-to-b from-bronze to-[oklch(0.62_0.10_50)]",
+  // Solid medal fill + chunky hard 3D bottom ledge (darker oklch shade) + soft ambient
+  const barStyle: Record<1 | 2 | 3, string> = {
+    1: "bg-gold shadow-[0_6px_0_oklch(0.7_0.14_82),0_12px_20px_-8px_oklch(0.7_0.14_82/0.5)] ring-1 ring-inset ring-black/5",
+    2: "bg-silver shadow-[0_6px_0_oklch(0.66_0.012_250),0_12px_20px_-8px_oklch(0.66_0.012_250/0.5)] ring-1 ring-inset ring-black/5",
+    3: "bg-bronze shadow-[0_6px_0_oklch(0.56_0.10_50),0_12px_20px_-8px_oklch(0.56_0.10_50/0.5)] ring-1 ring-inset ring-black/5",
   };
 
   return (
@@ -115,24 +123,40 @@ function Podium({
       {ordered.map((row) => {
         const r = row.rank as 1 | 2 | 3;
         const isOwn = highlightPlayerId === row.playerId;
-        return (
-          <div
-            key={row.playerId}
-            className="flex flex-1 flex-col items-center gap-2 justify-end"
-          >
+        const columnContent = (
+          <>
             <PodiumAvatar name={row.playerName} rank={r} />
             <span
               className={`text-[13px] font-bold truncate max-w-full text-center ${isOwn ? "text-primary" : ""}`}
             >
               {row.playerName}
             </span>
+          </>
+        );
+        return (
+          <div
+            key={row.playerId}
+            className="flex flex-1 flex-col items-center gap-2 justify-end"
+          >
+            {row.href ? (
+              <Link
+                href={row.href}
+                className="flex flex-col items-center gap-2 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
+              >
+                {columnContent}
+              </Link>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                {columnContent}
+              </div>
+            )}
             {/* Bar grows from bottom; CSS animation reuses the shared bargrow keyframe */}
             <div
               className={[
-                "w-full rounded-t-2xl flex flex-col items-center justify-start pt-2.5 gap-1 shadow-card origin-bottom",
+                "w-full rounded-t-2xl flex flex-col items-center justify-start pt-2.5 gap-1 origin-bottom",
                 "animate-[bargrow_0.7s_var(--ease-bounce)_forwards]",
                 barHeight[r],
-                barGradient[r],
+                barStyle[r],
               ].join(" ")}
               style={{
                 // stagger: p3 first, p2 second, p1 last (matches design-lab)
@@ -182,7 +206,7 @@ function TableRow({
             // (first=top/bottom/left, middle=top/bottom, last=top/bottom/right)
             // so there are no internal vertical dividers between the columns.
             "ring-primary bg-primary/10 [&>td:first-child]:rounded-l-xl [&>td:last-child]:rounded-r-xl [&>td:first-child]:shadow-[inset_0_2px_0_var(--color-primary),inset_0_-2px_0_var(--color-primary),inset_2px_0_0_var(--color-primary)] [&>td:nth-child(2)]:shadow-[inset_0_2px_0_var(--color-primary),inset_0_-2px_0_var(--color-primary)] [&>td:last-child]:shadow-[inset_0_2px_0_var(--color-primary),inset_0_-2px_0_var(--color-primary),inset_-2px_0_0_var(--color-primary)]"
-          : "[&>td]:border-b [&>td:last-child]:border-0",
+          : "[&>td]:border-b",
       ]
         .filter(Boolean)
         .join(" ")}

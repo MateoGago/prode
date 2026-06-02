@@ -290,6 +290,35 @@ describe("LeaderboardTable", () => {
     expect(screen.getByTestId("position-badge-t3")).toBeInTheDocument();
   });
 
+  it("podium player with href renders as a link inside the podium region", () => {
+    const rowsWithHref: LeaderboardRow[] = [
+      {
+        playerId: "u1",
+        playerName: "Alice",
+        totalPoints: 30,
+        href: "/tabla/u1",
+      },
+      { playerId: "u2", playerName: "Bob", totalPoints: 20, href: "/tabla/u2" },
+      { playerId: "u3", playerName: "Charlie", totalPoints: 10 },
+    ];
+    render(<LeaderboardTable rows={rowsWithHref} />);
+
+    const podium = screen.getByRole("region", { name: /podio/i });
+
+    // Alice (rank 1) and Bob (rank 2) have hrefs — should be links
+    const aliceLink = screen.getAllByRole("link", { name: "Alice" })[0];
+    expect(podium).toContainElement(aliceLink);
+    expect(aliceLink).toHaveAttribute("href", "/tabla/u1");
+
+    const bobLink = screen.getAllByRole("link", { name: "Bob" })[0];
+    expect(podium).toContainElement(bobLink);
+    expect(bobLink).toHaveAttribute("href", "/tabla/u2");
+
+    // Charlie has no href — should NOT be a link inside the podium
+    expect(podium).toHaveTextContent("Charlie");
+    expect(screen.queryByRole("link", { name: "Charlie" })).toBeNull();
+  });
+
   it("podium renders when points differ (top player has more than the rest)", () => {
     const withSpread: LeaderboardRow[] = [
       { playerId: "s1", playerName: "Leader", totalPoints: 50 },
