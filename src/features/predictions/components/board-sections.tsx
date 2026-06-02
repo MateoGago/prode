@@ -50,14 +50,10 @@ export function BoardSections({ groups, days, rounds }: BoardSectionsProps) {
         ))
       ) : (
         <>
-          {groups.map((group) => (
-            <GroupSection
-              key={group.groupLabel}
-              groupLabel={group.groupLabel}
-              matches={group.matches}
-            />
-          ))}
-          {/* Knockout rounds appear after the groups once their teams resolve. */}
+          {/* Knockout rounds lead the Etapa view once their teams resolve — it's
+              the current stage, and burying them under 12 group sections (72
+              cards) made them unreachable. During the group stage `rounds` is
+              empty, so the groups simply show on their own. */}
           {rounds.map((r) => (
             <RoundSection
               key={r.round}
@@ -65,6 +61,13 @@ export function BoardSections({ groups, days, rounds }: BoardSectionsProps) {
               label={r.label}
               multiplier={r.multiplier}
               matches={r.matches}
+            />
+          ))}
+          {groups.map((group) => (
+            <GroupSection
+              key={group.groupLabel}
+              groupLabel={group.groupLabel}
+              matches={group.matches}
             />
           ))}
         </>
