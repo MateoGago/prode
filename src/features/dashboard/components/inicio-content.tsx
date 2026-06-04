@@ -120,17 +120,17 @@ function ResultRow({ row }: { row: LastResultRow }) {
 
 function NextMatchHero({ next }: { next: NextMatchView }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.40_0.10_165)] to-[oklch(0.30_0.07_168)] p-5 text-white shadow-card">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary-deep p-5 text-primary-foreground shadow-3d">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_85%_-10%,oklch(0.66_0.185_150/.45),transparent_60%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_85%_-10%,var(--primary-soft),transparent_60%)] opacity-40"
       />
       <div className="relative flex items-center justify-between gap-2">
-        <span className="rounded-pill bg-white/15 px-3 py-1 text-[11px] font-semibold">
+        <span className="rounded-pill bg-primary-soft px-3 py-1 text-[11px] font-semibold text-foreground">
           Fase de grupos{next.groupLabel ? ` · Grupo ${next.groupLabel}` : ""}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-pill bg-white/15 px-3 py-1 text-[11px] font-semibold">
-          <span className="size-1.5 rounded-full bg-white animate-pulse-live" />
+        <span className="inline-flex items-center gap-1.5 rounded-pill bg-primary-soft px-3 py-1 text-[11px] font-semibold text-foreground">
+          <span className="size-1.5 animate-pulse-live rounded-full bg-gol" />
           <KickoffCountdown kickoffAt={next.kickoffAtISO} prefix="Cierra en" />
         </span>
       </div>
@@ -141,12 +141,12 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
             name={next.home.name}
             flagUrl={next.home.flagUrl}
             size={36}
-            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-white/15"
-            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-white/30"
+            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-primary-foreground/20"
+            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-primary-foreground/40"
           />
           <span className="text-sm font-bold">{next.home.name}</span>
         </div>
-        <span className="font-heading text-[15px] font-bold text-white/60">
+        <span className="font-heading text-[15px] font-bold text-primary-foreground/65">
           VS
         </span>
         <div className="flex flex-1 flex-col items-center gap-2">
@@ -154,22 +154,22 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
             name={next.away.name}
             flagUrl={next.away.flagUrl}
             size={36}
-            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-white/15"
-            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-white/30"
+            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-primary-foreground/20"
+            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-primary-foreground/40"
           />
           <span className="text-sm font-bold">{next.away.name}</span>
         </div>
       </div>
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-1.5 rounded-pill bg-warn px-3 py-1.5 text-xs font-bold text-[oklch(0.24_0.06_60)]">
+        <span className="inline-flex items-center gap-1.5 rounded-pill bg-gol px-3 py-1.5 text-xs font-bold text-foreground">
           ⏱ {next.closesAtLabel}
         </span>
         <Button
           asChild
           variant="pop-ghost"
           size="lg"
-          className="bg-white text-foreground ring-0 shadow-[0_4px_0_oklch(0_0_0/.25)]"
+          className="bg-primary-foreground text-foreground ring-0 shadow-card"
         >
           <Link href="/predicciones">Pronosticar →</Link>
         </Button>
