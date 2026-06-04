@@ -50,7 +50,7 @@ export function FixtureClient({
       <div
         role="toolbar"
         aria-label="Ver por"
-        className="inline-flex flex-none items-center gap-[3px] rounded-full bg-muted p-[3px]"
+        className="inline-flex w-fit flex-none items-center gap-[3px] rounded-full bg-muted p-[3px]"
       >
         <FixtureSegment
           label="Grupos"

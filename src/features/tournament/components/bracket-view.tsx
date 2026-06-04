@@ -30,8 +30,8 @@ export function BracketView({ rounds }: BracketViewProps) {
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex min-w-max gap-4">
+    <div className="overflow-x-auto pb-4 lg:overflow-visible">
+      <div className="flex min-w-max gap-4 lg:min-w-0">
         {rounds.map((round) => (
           <BracketRoundColumn key={round.round} round={round} />
         ))}
@@ -50,7 +50,7 @@ interface BracketRoundColumnProps {
 
 function BracketRoundColumn({ round }: BracketRoundColumnProps) {
   return (
-    <div className="flex w-56 flex-col gap-3">
+    <div className="flex w-56 shrink-0 flex-col gap-3 lg:w-auto lg:flex-1">
       <div className="rounded-md bg-muted/60 px-3 py-1.5 text-center">
         <span className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
           {round.label}
