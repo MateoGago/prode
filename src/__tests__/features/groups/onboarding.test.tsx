@@ -7,6 +7,7 @@
  *  - displays the onboarding headline
  */
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 // Mock child forms — we only test the shell structure here
@@ -24,6 +25,13 @@ vi.mock("@/features/groups/components/join-group-form", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/onboarding",
+}));
+
+// next/link mock — render a plain anchor so the href is assertable in jsdom
+vi.mock("next/link", () => ({
+  default: ({ href, children }: { href: string; children: ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
 }));
 
 import { OnboardingContent } from "@/features/groups/components/onboarding";
@@ -44,9 +52,25 @@ describe("OnboardingContent", () => {
     expect(screen.getByRole("tab", { name: /unirse/i })).toBeInTheDocument();
   });
 
-  it("renders CreateGroupForm in the default (Crear) tab", () => {
+  it("renders JoinGroupForm in the default (Unirse) tab", () => {
     render(<OnboardingContent />);
 
-    expect(screen.getByTestId("create-group-form")).toBeInTheDocument();
+    expect(screen.getByTestId("join-group-form")).toBeInTheDocument();
+  });
+
+  it("hides the back-to-home link by default", () => {
+    render(<OnboardingContent />);
+
+    expect(
+      screen.queryByRole("link", { name: /volver al inicio/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a back-to-home link when canGoBack is true", () => {
+    render(<OnboardingContent canGoBack />);
+
+    expect(
+      screen.getByRole("link", { name: /volver al inicio/i }),
+    ).toHaveAttribute("href", "/");
   });
 });
