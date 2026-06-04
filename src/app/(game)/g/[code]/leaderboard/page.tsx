@@ -1,5 +1,6 @@
 import { GroupInviteButton } from "@/features/groups/components/group-invite-button";
 import { GroupLeaderboard } from "@/features/groups/components/group-leaderboard";
+import { JoinedToast } from "@/features/groups/components/joined-toast";
 import { resolveActiveGroup } from "@/features/groups/actions/resolve-active-group";
 import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
 import { createClient } from "@/shared/supabase/server";
@@ -14,13 +15,19 @@ import { createClient } from "@/shared/supabase/server";
  * ever co-located differently.
  *
  * Player name links point to /g/{code}/tabla/{userId} (REQ-05 co-member gate).
+ *
+ * ?joined=1 is set by the /join/[code] route after a successful auto-join via
+ * invite link. We render <JoinedToast /> once to confirm the join to the user.
  */
 export default async function GroupLeaderboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ joined?: string }>;
 }) {
   const { code } = await params;
+  const { joined } = await searchParams;
 
   const { groupId, group } = await resolveActiveGroup(code);
 
@@ -40,6 +47,7 @@ export default async function GroupLeaderboardPage({
 
   return (
     <section className="grid gap-6">
+      {joined === "1" && <JoinedToast />}
       <header className="flex items-start justify-between gap-3">
         <div className="grid gap-1">
           <h1
