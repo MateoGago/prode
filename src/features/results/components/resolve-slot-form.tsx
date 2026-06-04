@@ -29,6 +29,8 @@ export interface ResolveSlotFormTeamOption {
 export interface ResolveSlotFormProps {
   matchId: string;
   slot: Slot;
+  /** Human hint for which team belongs in this slot (e.g. "1° Grupo A", "Ganador P74"). */
+  slotHint?: string;
   teams: ResolveSlotFormTeamOption[];
   onSubmit: (input: ResolveSlotInput) => Promise<ResolveSlotResult>;
 }
@@ -48,13 +50,13 @@ const SERVER_ERROR_MESSAGES: Record<
 export function ResolveSlotForm({
   matchId,
   slot,
+  slotHint,
   teams,
   onSubmit,
 }: ResolveSlotFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(
-    teams[0]?.id ?? "",
-  );
+  // Start unselected so a stray "Asignar" click can't assign the first team.
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -76,9 +78,11 @@ export function ResolveSlotForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-3">
-      {/* Hidden fields are defense-in-depth; the action receives these via input */}
-      <span className="text-sm font-medium text-muted-foreground">
-        {slotLabel}:
+      <span className="text-sm font-medium">
+        <span className="text-muted-foreground">{slotLabel}:</span>
+        {slotHint ? (
+          <span className="ml-1 font-semibold">{slotHint}</span>
+        ) : null}
       </span>
 
       <select
@@ -88,6 +92,9 @@ export function ResolveSlotForm({
         className="flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         aria-label={`Equipo ${slotLabel}`}
       >
+        <option value="" disabled>
+          — Elegí equipo —
+        </option>
         {teams.map((team) => (
           <option key={team.id} value={team.id}>
             {team.name}
@@ -95,7 +102,12 @@ export function ResolveSlotForm({
         ))}
       </select>
 
-      <Button type="submit" variant="pop" size="sm" disabled={isPending}>
+      <Button
+        type="submit"
+        variant="pop"
+        size="sm"
+        disabled={isPending || !selectedTeamId}
+      >
         {isPending ? (
           <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
         ) : null}

@@ -59,6 +59,38 @@ describe("ResolveSlotForm — home slot", () => {
     }
   });
 
+  it("renders the slot hint so the admin knows which team belongs here", () => {
+    render(
+      <ResolveSlotForm
+        matchId="m1"
+        slot="home"
+        slotHint="1° Grupo A"
+        teams={TEAMS}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    expect(screen.getByText("1° Grupo A")).toBeInTheDocument();
+  });
+
+  it("disables the submit button until a team is selected", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResolveSlotForm
+        matchId="m1"
+        slot="home"
+        teams={TEAMS}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    const btn = screen.getByRole("button", { name: /asignar/i });
+    expect(btn).toBeDisabled();
+
+    await user.selectOptions(screen.getByRole("combobox"), "Argentina");
+    expect(btn).not.toBeDisabled();
+  });
+
   it("renders a submit button (always visible — gate is server-side)", () => {
     render(
       <ResolveSlotForm

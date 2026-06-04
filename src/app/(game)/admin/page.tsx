@@ -9,6 +9,8 @@ import { ResolveSlotForm } from "@/features/results/components/resolve-slot-form
 import type { ResolveSlotFormTeamOption } from "@/features/results/components/resolve-slot-form";
 import { createClient } from "@/shared/supabase/server";
 import { EmptyState } from "@/shared/ui/empty-state";
+import { formatKickoffLong } from "@/shared/datetime";
+import { formatPlaceholder } from "@/features/tournament/entities/bracket";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -94,27 +96,44 @@ export default async function AdminPage() {
                 key={`${slot.matchId}-slots`}
                 className="grid gap-2 rounded-xl border border-border bg-card p-4"
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {slot.round.toUpperCase()}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {slot.round.toUpperCase()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatKickoffLong(slot.kickoffAt)}
+                  </p>
+                </div>
 
                 {slot.homeTeamId === null ? (
                   <ResolveSlotForm
                     matchId={slot.matchId}
                     slot="home"
+                    slotHint={formatPlaceholder(slot.homePlaceholder ?? "")}
                     teams={allTeams}
                     onSubmit={resolveSlotAction}
                   />
-                ) : null}
+                ) : (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Local:</span>{" "}
+                    <span className="font-medium">{slot.homeTeamName}</span>
+                  </p>
+                )}
 
                 {slot.awayTeamId === null ? (
                   <ResolveSlotForm
                     matchId={slot.matchId}
                     slot="away"
+                    slotHint={formatPlaceholder(slot.awayPlaceholder ?? "")}
                     teams={allTeams}
                     onSubmit={resolveSlotAction}
                   />
-                ) : null}
+                ) : (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Visitante:</span>{" "}
+                    <span className="font-medium">{slot.awayTeamName}</span>
+                  </p>
+                )}
               </div>
             ))}
           </div>

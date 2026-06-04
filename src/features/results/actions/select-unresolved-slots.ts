@@ -12,16 +12,25 @@ export interface UnresolvedSlot {
   matchId: string;
   /** Knockout round label for display (e.g. "r16", "qf"). */
   round: string;
+  /** Kickoff instant as an ISO 8601 UTC string — RSC→client safe. */
+  kickoffAt: string;
   /** null means this slot is unresolved and needs assignment. */
   homeTeamId: string | null;
   homeTeamName: string | null;
+  /** Raw bracket slot label for the home side (e.g. "1A", "W74"); the admin UI
+   *  formats it so the admin knows which team belongs here. */
+  homePlaceholder: string | null;
   awayTeamId: string | null;
   awayTeamName: string | null;
+  awayPlaceholder: string | null;
 }
 
 interface UnresolvedMatchRow {
   id: string;
   round: string;
+  kickoff_at: string;
+  home_placeholder: string | null;
+  away_placeholder: string | null;
   home_team: { id: string; name: string } | null;
   away_team: { id: string; name: string } | null;
 }
@@ -36,6 +45,9 @@ export async function selectUnresolvedKnockoutSlots(): Promise<
     .select(
       `id,
        round,
+       kickoff_at,
+       home_placeholder,
+       away_placeholder,
        home_team:teams!matches_home_team_id_fkey(id, name),
        away_team:teams!matches_away_team_id_fkey(id, name)`,
     )
@@ -50,9 +62,12 @@ export async function selectUnresolvedKnockoutSlots(): Promise<
   return rows.map((row) => ({
     matchId: row.id,
     round: row.round,
+    kickoffAt: row.kickoff_at,
     homeTeamId: row.home_team?.id ?? null,
     homeTeamName: row.home_team?.name ?? null,
+    homePlaceholder: row.home_placeholder,
     awayTeamId: row.away_team?.id ?? null,
     awayTeamName: row.away_team?.name ?? null,
+    awayPlaceholder: row.away_placeholder,
   }));
 }
