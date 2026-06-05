@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { safeNext } from "@/features/auth/entities/safe-next";
 import { AuthForm } from "@/features/auth/components/auth-form";
 import { createClient } from "@/shared/supabase/server";
 
@@ -8,13 +9,19 @@ export const metadata: Metadata = {
   title: "Ingresar · Prode Mundial 2026",
 };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) redirect("/");
+  if (user) redirect(safeNext(next));
 
   return (
     <main className="grid min-h-dvh place-items-center px-4 py-10">
@@ -33,7 +40,7 @@ export default async function LoginPage() {
 
         {/* Cancha Pop card — solid white, shadow-card, rounded-2xl */}
         <div className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-7">
-          <AuthForm />
+          <AuthForm next={next} />
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">

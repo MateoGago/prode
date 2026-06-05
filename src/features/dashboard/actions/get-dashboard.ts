@@ -1,6 +1,6 @@
-import { getMatchBreakdown } from "@/features/leaderboard";
-import { getPredictionsProgress } from "@/features/predictions";
-import type { PredictionProgress } from "@/features/predictions";
+import { getMatchBreakdown } from "@/features/leaderboard/actions/get-match-breakdown";
+import { getPredictionsProgress } from "@/features/predictions/actions/get-predictions-progress";
+import type { PredictionProgress } from "@/features/predictions/entities/predictions-board";
 import {
   mapMatchRow,
   type MatchWithTeamsRow,
@@ -16,8 +16,6 @@ import {
 import type { Match } from "@/features/fixtures/entities/match";
 
 export interface DashboardData {
-  // TODO(prode-groups PR4): home hub — replace with per-group stats from
-  // listMyGroups(). Global position/points removed (no global leaderboard).
   totalMatches: number;
   /** Confirmed predictions the player has scored — "jugados" numerator. */
   played: number;

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { PredictionsPageClient } from "@/features/predictions";
+import { PredictionsPageClient } from "@/features/predictions/components/predictions-page-client";
 import {
   buildPredictionsByMatchId,
   groupMatches,
@@ -10,15 +10,14 @@ import {
   type MatchWithTeamsRow,
   type PredictionReadRow,
 } from "@/features/predictions/entities/predictions-page";
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { createClient } from "@/shared/supabase/server";
 
 export default async function PrediccionesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const supabase = await createClient();
 
   const { data: matchesData, error: matchesError } = await supabase
     .from("matches")

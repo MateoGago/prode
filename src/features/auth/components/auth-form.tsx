@@ -53,7 +53,7 @@ function GoogleIcon() {
   );
 }
 
-export function AuthForm() {
+export function AuthForm({ next }: { next?: string }) {
   const [isGooglePending, startGoogle] = useTransition();
 
   const loginForm = useForm<LoginInput>({
@@ -67,18 +67,18 @@ export function AuthForm() {
   });
 
   async function onLogin(values: LoginInput) {
-    const result = await signInWithPassword(values);
+    const result = await signInWithPassword(values, next);
     if (result?.error) toast.error(result.error);
   }
 
   async function onSignup(values: SignupInput) {
-    const result = await signUpWithPassword(values);
+    const result = await signUpWithPassword(values, next);
     if (result?.error) toast.error(result.error);
   }
 
   function onGoogle() {
     startGoogle(async () => {
-      const result = await signInWithGoogle();
+      const result = await signInWithGoogle(next);
       if (result?.error) toast.error(result.error);
     });
   }

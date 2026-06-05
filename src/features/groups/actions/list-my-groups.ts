@@ -1,18 +1,21 @@
 "use server";
 
 /**
- * listMyGroups — returns a summary of all groups the current user belongs to.
+ * listMyGroups — summary of every group the current user belongs to, with the
+ * caller's position + points per group.
  *
- * Per-group position and points are derived by calling getLeaderboard(groupId)
- * for each membership and finding the caller's row.
- *
- * TODO(scale): N+1 — one get_leaderboard RPC call per group. Acceptable at
- * current scale (11 users, expected few groups). Replace with a dedicated
- * summary SQL view or a batch RPC when group/member count grows.
+ * Two round-trips total, regardless of group count: one for the memberships
+ * (group metadata) and one get_group_leaderboards RPC for every group's
+ * standings at once. Ranking (shared rank on ties) is the shared rankByPoints.
  */
 
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
+import {
+  type GetLeaderboardRpcRow,
+  mapLeaderboardRows,
+  rankByPoints,
+} from "@/features/leaderboard/entities/leaderboard";
 import { createClient } from "@/shared/supabase/server";
-import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
 
 export interface GroupSummary {
   groupId: string;
@@ -33,14 +36,13 @@ type GroupMemberRow = {
   };
 };
 
+type GroupLeaderboardRpcRow = GetLeaderboardRpcRow & { group_id: string };
+
 export async function listMyGroups(): Promise<GroupSummary[]> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) return [];
+
+  const supabase = await createClient();
 
   const { data: memberships, error } = await supabase
     .from("group_members")
@@ -54,43 +56,35 @@ export async function listMyGroups(): Promise<GroupSummary[]> {
   if (!memberships || memberships.length === 0) return [];
 
   const rows = memberships as unknown as GroupMemberRow[];
+  const groupIds = rows.map((m) => m.group_id);
 
-  const summaries = await Promise.all(
-    rows.map(async (m) => {
-      const g = m.groups;
-      const leaderboard = await getLeaderboard(g.id);
-
-      // Derive position (dense rank, DESC points) and the caller's points.
-      const sorted = [...leaderboard].sort(
-        (a, b) => b.totalPoints - a.totalPoints,
-      );
-
-      let rank = 0;
-      let lastPoints: number | null = null;
-      let callerPosition: number | null = null;
-      let callerPoints = 0;
-
-      for (let i = 0; i < sorted.length; i++) {
-        const row = sorted[i];
-        if (lastPoints === null || row.totalPoints !== lastPoints) {
-          rank = i + 1;
-          lastPoints = row.totalPoints;
-        }
-        if (row.playerId === user.id) {
-          callerPosition = rank;
-          callerPoints = row.totalPoints;
-        }
-      }
-
-      return {
-        groupId: g.id,
-        name: g.name,
-        inviteCode: g.invite_code,
-        position: callerPosition,
-        points: callerPoints,
-      } satisfies GroupSummary;
-    }),
+  const { data: lbData, error: lbError } = await supabase.rpc(
+    "get_group_leaderboards",
+    { p_group_ids: groupIds },
   );
+  if (lbError) {
+    throw new Error(lbError.message);
+  }
 
-  return summaries;
+  // Bucket the flat RPC rows by group so each group ranks independently.
+  const rowsByGroup = new Map<string, GetLeaderboardRpcRow[]>();
+  for (const row of (lbData ?? []) as GroupLeaderboardRpcRow[]) {
+    const bucket = rowsByGroup.get(row.group_id) ?? [];
+    bucket.push(row);
+    rowsByGroup.set(row.group_id, bucket);
+  }
+
+  return rows.map((m) => {
+    const g = m.groups;
+    const leaderboard = mapLeaderboardRows(rowsByGroup.get(g.id) ?? []);
+    const own = rankByPoints(leaderboard).find((r) => r.playerId === user.id);
+
+    return {
+      groupId: g.id,
+      name: g.name,
+      inviteCode: g.invite_code,
+      position: own?.rank ?? null,
+      points: own?.totalPoints ?? 0,
+    } satisfies GroupSummary;
+  });
 }

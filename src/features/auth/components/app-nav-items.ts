@@ -1,4 +1,4 @@
-import { Home, ListOrdered, Shield, Swords } from "lucide-react";
+import { Home, ListOrdered, Shield, Swords, Trophy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type NavItem = {
@@ -22,6 +22,7 @@ export function buildNavItems(tablaHref: string): readonly NavItem[] {
   return [
     { href: "/", label: "Inicio", icon: Home },
     { href: "/predicciones", label: "Partidos", icon: Swords },
+    { href: "/fixture", label: "Fixture", icon: Trophy },
     {
       href: tablaHref,
       label: "Tabla",

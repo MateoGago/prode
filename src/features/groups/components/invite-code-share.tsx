@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Check, Link } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,58 +21,58 @@ function WhatsappIcon({ className }: { className?: string }) {
 }
 
 /**
- * InviteCodeShare — surfaces a group's invite code so the owner can actually
- * share it. The code IS the product here: shown big and monospaced, one tap to
- * copy, one tap to fire a prefilled WhatsApp message (the channel that matters
- * for a friends' prode). Reused by the post-create success state and by the
- * persistent "Invitar" button on the group page.
+ * InviteCodeShare — surfaces an invite link so the owner can share the group.
+ * Primary action is copying the invite link; WhatsApp shares the URL directly
+ * (a URL as the message payload is fine — WhatsApp keeps it as a clickable link).
+ * The code is also shown as a secondary reference for manual entry.
+ *
+ * Reused by the post-create success state and by the persistent "Invitar"
+ * button on the group page.
  */
 export function InviteCodeShare({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
-  // Text-only on purpose: WhatsApp (desktop especially) treats a shared text
-  // that contains a URL as a link-share and DROPS everything except the URL, so
-  // the code would be lost. No newlines either (WhatsApp Web truncates at them).
-  // The code lives in the body so it always survives.
-  const message = `¡Sumate a mi grupo en Prode! 🏆 Entrá con el código ${code}`;
+  const inviteUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/join/${code}`
+      : `/join/${code}`;
+
+  // The URL IS the invite payload: WhatsApp will render it as a clickable link
+  // and users land on /join/<code> which auto-joins them. No need to include
+  // the code separately — the URL carries it.
+  const message = `¡Sumate a mi grupo en Prode! 🏆 ${inviteUrl}`;
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
-  async function copyCode() {
+  async function copyLink() {
     try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      toast.success("Código copiado");
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopiedLink(true);
+      toast.success("Link copiado");
+      setTimeout(() => setCopiedLink(false), 2000);
     } catch {
-      toast.error("No se pudo copiar el código");
+      toast.error("No se pudo copiar el link");
     }
   }
 
   return (
     <div className="grid gap-3">
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 py-2 pr-2 pl-4">
-        <span className="flex-1 font-mono text-xl font-bold tracking-[0.25em] tabular-nums">
-          {code}
-        </span>
-        <Button
-          type="button"
-          variant="pop-ghost"
-          size="sm"
-          onClick={copyCode}
-          className="shrink-0 gap-1.5"
-        >
-          {copied ? (
-            <Check className="size-4" aria-hidden="true" />
-          ) : (
-            <Copy className="size-4" aria-hidden="true" />
-          )}
-          {copied ? "Copiado" : "Copiar"}
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="pop"
+        className="h-11 w-full gap-2 text-sm font-semibold"
+        onClick={copyLink}
+      >
+        {copiedLink ? (
+          <Check className="size-4" aria-hidden="true" />
+        ) : (
+          <Link className="size-4" aria-hidden="true" />
+        )}
+        {copiedLink ? "Link copiado" : "Copiar link"}
+      </Button>
 
       <Button
         asChild
-        variant="pop"
+        variant="pop-ghost"
         className="h-11 w-full gap-2 text-sm font-semibold"
       >
         <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
@@ -80,6 +80,11 @@ export function InviteCodeShare({ code }: { code: string }) {
           Compartir por WhatsApp
         </a>
       </Button>
+
+      <p className="text-center text-xs text-muted-foreground">
+        o con código:{" "}
+        <span className="font-mono font-semibold tracking-widest">{code}</span>
+      </p>
     </div>
   );
 }

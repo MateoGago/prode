@@ -1,6 +1,44 @@
 import { describe, expect, it } from "vitest";
 
-import { isNavItemActive } from "@/features/auth/components/app-nav-items";
+import {
+  buildNavItems,
+  isNavItemActive,
+} from "@/features/auth/components/app-nav-items";
+
+describe("buildNavItems", () => {
+  const TABLA_HREF = "/g/ABC123/leaderboard";
+
+  it("includes a Fixture item linking to /fixture", () => {
+    const items = buildNavItems(TABLA_HREF);
+    const fixtureItem = items.find((i) => i.href === "/fixture");
+    expect(fixtureItem).toBeDefined();
+    expect(fixtureItem?.label).toBe("Fixture");
+  });
+
+  it("positions Fixture as the 3rd item (index 2)", () => {
+    const items = buildNavItems(TABLA_HREF);
+    expect(items[2].href).toBe("/fixture");
+  });
+
+  it("non-admin items excludes the Admin item", () => {
+    const items = buildNavItems(TABLA_HREF);
+    const nonAdminItems = items.filter((i) => !i.adminOnly);
+    // Inicio, Partidos, Fixture, Tabla = 4 non-admin items
+    expect(nonAdminItems).toHaveLength(4);
+  });
+
+  it("admin sees 5 items total (including adminOnly)", () => {
+    const items = buildNavItems(TABLA_HREF);
+    // All items including Admin
+    expect(items).toHaveLength(5);
+  });
+
+  it("Fixture item has no adminOnly flag", () => {
+    const items = buildNavItems(TABLA_HREF);
+    const fixtureItem = items.find((i) => i.href === "/fixture");
+    expect(fixtureItem?.adminOnly).toBeFalsy();
+  });
+});
 
 describe("isNavItemActive", () => {
   it("matches the home route only exactly", () => {

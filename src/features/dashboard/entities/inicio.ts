@@ -10,6 +10,7 @@ import type {
   LeaderboardRow,
   MatchBreakdownItem,
 } from "@/features/leaderboard";
+import { rankByPoints } from "@/features/leaderboard/entities/leaderboard";
 
 /**
  * The player's next pronosticable match: the soonest `scheduled` fixture whose
@@ -67,23 +68,10 @@ export function derivePlayerStats(
   rows: LeaderboardRow[],
   userId: string,
 ): PlayerStats {
-  const sorted = [...rows].sort((a, b) => b.totalPoints - a.totalPoints);
-
-  let rank = 0;
-  let lastPoints: number | null = null;
-
-  for (let i = 0; i < sorted.length; i++) {
-    const row = sorted[i];
-    if (lastPoints === null || row.totalPoints !== lastPoints) {
-      rank = i + 1;
-      lastPoints = row.totalPoints;
-    }
-    if (row.playerId === userId) {
-      return { position: rank, points: row.totalPoints };
-    }
-  }
-
-  return { position: null, points: 0 };
+  const own = rankByPoints(rows).find((row) => row.playerId === userId);
+  return own
+    ? { position: own.rank, points: own.totalPoints }
+    : { position: null, points: 0 };
 }
 
 /** Result-pill flavour, mirrors the proof's `.pts win|part|zero`. */

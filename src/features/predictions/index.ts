@@ -3,7 +3,6 @@
 
 export { getPredictionsProgress } from "./actions/get-predictions-progress";
 export { saveBatchPredictions } from "./actions/save-batch-predictions";
-export { savePrediction } from "./actions/save-prediction";
 export { AdvancerPicker } from "./components/advancer-picker";
 export { BatchBar } from "./components/batch-bar";
 export { BoardSections } from "./components/board-sections";
