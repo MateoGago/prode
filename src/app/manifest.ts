@@ -10,6 +10,7 @@ import {
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: appName,
     short_name: appShortName,
     description: appDescription,

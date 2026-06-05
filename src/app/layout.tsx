@@ -25,7 +25,6 @@ export const metadata: Metadata = {
   title: appName,
   description: appDescription,
   applicationName: appName,
-  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
