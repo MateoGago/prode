@@ -1,10 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
+
 import type { PredictionInput } from "@/features/predictions/entities/prediction";
-import type {
-  DayBlock,
-  GroupBlock,
+import {
+  type DayBlock,
+  type GroupBlock,
+  type RoundBlock,
+  selectNextScheduledMatch,
 } from "@/features/predictions/entities/predictions-page";
+import { arDayParts } from "@/shared/datetime";
 
 import { BatchBar } from "./batch-bar";
 import { BoardSections } from "./board-sections";
@@ -18,12 +23,14 @@ import { ViewModeToggle } from "./view-mode-toggle";
 export type PredictionsPageClientProps = {
   groups: GroupBlock[];
   days: DayBlock[];
+  rounds: RoundBlock[];
   initialPredictionsByMatchId: Record<string, PredictionInput>;
 };
 
 export function PredictionsPageClient({
   groups,
   days,
+  rounds,
   initialPredictionsByMatchId,
 }: PredictionsPageClientProps) {
   if (groups.length === 0) {
@@ -34,11 +41,18 @@ export function PredictionsPageClient({
     );
   }
 
+  // On load, land on the next still-playable match's day (Día is the default
+  // view) so the user doesn't scroll past finished group days to reach the
+  // current stage (e.g. the Round of 32). null → no scroll (nothing pending).
+  const nextMatch = selectNextScheduledMatch(days.flatMap((d) => d.matches));
+  const scrollAnchor = nextMatch ? arDayParts(nextMatch.kickoffAt).key : null;
+
   return (
     <PredictionsProvider
       initialPredictions={initialPredictionsByMatchId}
       groups={groups}
     >
+      <ScrollToAnchorOnLoad anchor={scrollAnchor} />
       <ProgressHeader />
 
       {/* View switch (Día/Etapa) — right-aligned above the filter row. */}
@@ -55,11 +69,31 @@ export function PredictionsPageClient({
 
       <FilteredGroupsOrEmpty>
         {/* BoardSections owns the bottom padding that clears the fixed BatchBar. */}
-        <BoardSections groups={groups} days={days} />
+        <BoardSections groups={groups} days={days} rounds={rounds} />
       </FilteredGroupsOrEmpty>
 
       {/* Sibling of the scroll content (constraint A): fixed, never inside it. */}
       <BatchBar />
     </PredictionsProvider>
   );
+}
+
+/**
+ * On mount, scrolls the matching section anchor into view (once). Used to land
+ * the user on the next playable match's day instead of the top of a finished
+ * group stage. Renders nothing.
+ */
+function ScrollToAnchorOnLoad({ anchor }: { anchor: string | null }) {
+  useEffect(() => {
+    if (!anchor) return;
+    // Wait a frame so the section is in the DOM before scrolling.
+    const raf = requestAnimationFrame(() => {
+      document
+        .getElementById(anchor)
+        ?.scrollIntoView({ block: "start", behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [anchor]);
+
+  return null;
 }

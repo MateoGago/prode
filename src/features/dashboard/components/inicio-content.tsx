@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
+import type { ReactNode } from "react";
 
 import type { LastResultRow } from "@/features/dashboard";
 import { Button } from "@/shared/ui/button";
@@ -29,8 +30,16 @@ export interface TeamView {
 export interface InicioContentProps {
   displayName: string;
   subline: string;
+  /** Group standings section, rendered right under the greeting. */
+  groupsSlot?: ReactNode;
+  /**
+   * When null, the Posición and Puntos StatCards are NOT rendered.
+   * The home hub omits them because position is group-scoped (shown in
+   * GroupCards above); passing null avoids permanently misleading "—"/0 values.
+   */
   position: number | null;
-  points: number;
+  /** Only meaningful when position is non-null. */
+  points?: number;
   played: number;
   totalMatches: number;
   /** Group-stage load progress ("X/72 cargadas") — shared with the nav badge. */
@@ -111,17 +120,17 @@ function ResultRow({ row }: { row: LastResultRow }) {
 
 function NextMatchHero({ next }: { next: NextMatchView }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.40_0.10_165)] to-[oklch(0.30_0.07_168)] p-5 text-white shadow-card">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary-deep p-5 text-primary-foreground shadow-3d">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_85%_-10%,oklch(0.66_0.185_150/.45),transparent_60%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_85%_-10%,var(--primary-soft),transparent_60%)] opacity-40"
       />
       <div className="relative flex items-center justify-between gap-2">
-        <span className="rounded-pill bg-white/15 px-3 py-1 text-[11px] font-semibold">
+        <span className="rounded-pill bg-primary-soft px-3 py-1 text-[11px] font-semibold text-foreground">
           Fase de grupos{next.groupLabel ? ` · Grupo ${next.groupLabel}` : ""}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-pill bg-white/15 px-3 py-1 text-[11px] font-semibold">
-          <span className="size-1.5 rounded-full bg-white animate-pulse-live" />
+        <span className="inline-flex items-center gap-1.5 rounded-pill bg-primary-soft px-3 py-1 text-[11px] font-semibold text-foreground">
+          <span className="size-1.5 animate-pulse-live rounded-full bg-gol" />
           <KickoffCountdown kickoffAt={next.kickoffAtISO} prefix="Cierra en" />
         </span>
       </div>
@@ -132,12 +141,12 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
             name={next.home.name}
             flagUrl={next.home.flagUrl}
             size={36}
-            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-white/15"
-            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-white/30"
+            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-primary-foreground/20"
+            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-primary-foreground/40"
           />
           <span className="text-sm font-bold">{next.home.name}</span>
         </div>
-        <span className="font-heading text-[15px] font-bold text-white/60">
+        <span className="font-heading text-[15px] font-bold text-primary-foreground/65">
           VS
         </span>
         <div className="flex flex-1 flex-col items-center gap-2">
@@ -145,22 +154,22 @@ function NextMatchHero({ next }: { next: NextMatchView }) {
             name={next.away.name}
             flagUrl={next.away.flagUrl}
             size={36}
-            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-white/15"
-            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-white/30"
+            imageClassName="shrink-0 rounded-[4px] object-cover ring-[1.5px] ring-inset ring-primary-foreground/20"
+            placeholderClassName="shrink-0 rounded-[4px] border border-dashed border-primary-foreground/40"
           />
           <span className="text-sm font-bold">{next.away.name}</span>
         </div>
       </div>
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-1.5 rounded-pill bg-warn px-3 py-1.5 text-xs font-bold text-[oklch(0.24_0.06_60)]">
+        <span className="inline-flex items-center gap-1.5 rounded-pill bg-gol px-3 py-1.5 text-xs font-bold text-foreground">
           ⏱ {next.closesAtLabel}
         </span>
         <Button
           asChild
           variant="pop-ghost"
           size="lg"
-          className="bg-white text-foreground ring-0 shadow-[0_4px_0_oklch(0_0_0/.25)]"
+          className="bg-primary-foreground text-foreground ring-0 shadow-card"
         >
           <Link href="/predicciones">Pronosticar →</Link>
         </Button>
@@ -210,8 +219,9 @@ function SectionHeader({
 export function InicioContent({
   displayName,
   subline,
+  groupsSlot,
   position,
-  points,
+  points = 0,
   played,
   totalMatches,
   predictionsLoaded,
@@ -238,20 +248,38 @@ export function InicioContent({
         </p>
       </motion.div>
 
-      {/* Desktop: hero + (stats over results) side-by-side; mobile: stacked. */}
+      {/* Group standings (passed by the page) — right under the greeting. */}
+      {groupsSlot ? (
+        <motion.div variants={rise}>{groupsSlot}</motion.div>
+      ) : null}
+
+      {/*
+       * Balanced two-column on lg: the próximo-partido hero on the left, and a
+       * stack of stats + últimos resultados on the right so neither column hangs
+       * with empty space. Mobile stacks everything.
+       */}
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-start">
-        {/* Left column on lg: stats + próximo partido */}
+        {/* Left: próximo partido hero */}
+        <motion.div variants={rise} className="grid gap-3">
+          <SectionHeader title="Tu próximo partido" />
+          {nextMatch ? <NextMatchHero next={nextMatch} /> : <NoNextMatch />}
+        </motion.div>
+
+        {/* Right: stats over últimos resultados */}
         <div className="grid gap-6">
           <motion.div
             variants={rise}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+            className={[
+              "grid gap-3",
+              position !== null ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2",
+            ].join(" ")}
           >
-            <StatCard
-              label="Posición"
-              value={position === null ? "—" : `#${position}`}
-              highlighted
-            />
-            <StatCard label="Puntos" value={String(points)} />
+            {position !== null && (
+              <>
+                <StatCard label="Posición" value={`#${position}`} highlighted />
+                <StatCard label="Puntos" value={String(points)} />
+              </>
+            )}
             <StatCard
               label="Jugados"
               value={String(played)}
@@ -265,30 +293,27 @@ export function InicioContent({
           </motion.div>
 
           <motion.div variants={rise} className="grid gap-3">
-            <SectionHeader title="Tu próximo partido" />
-            {nextMatch ? <NextMatchHero next={nextMatch} /> : <NoNextMatch />}
+            {/*
+             * "Ver tabla" previously linked to /tabla which now redirects to
+             * /onboarding. The leaderboard lives per-group at
+             * /g/{code}/leaderboard; this hub has no single active-group
+             * context, so the CTA is removed rather than pointing to a dead end.
+             */}
+            <SectionHeader title="Últimos resultados" />
+            {lastResults.length > 0 ? (
+              <div className="grid gap-2.5">
+                {lastResults.map((row) => (
+                  <ResultRow key={row.matchId} row={row} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="Todavía no jugaste ninguna"
+                description="Cargá tus pronósticos y, cuando se confirmen los resultados, los vas a ver acá con tus puntos."
+              />
+            )}
           </motion.div>
         </div>
-
-        {/* Right column on lg: últimos resultados */}
-        <motion.div variants={rise} className="grid gap-3">
-          <SectionHeader
-            title="Últimos resultados"
-            action={{ href: "/tabla", label: "Ver tabla" }}
-          />
-          {lastResults.length > 0 ? (
-            <div className="grid gap-2.5">
-              {lastResults.map((row) => (
-                <ResultRow key={row.matchId} row={row} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="Todavía no jugaste ninguna"
-              description="Cargá tus pronósticos y, cuando se confirmen los resultados, los vas a ver acá con tus puntos."
-            />
-          )}
-        </motion.div>
       </div>
     </motion.div>
   );

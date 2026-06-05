@@ -20,6 +20,11 @@ import { isPredictionOpen } from "./prediction";
 export interface BoardMatch {
   id: string;
   kickoffAt: Date;
+  /**
+   * Match status — when present, a locked match (confirmed/live/finished, or
+   * past kickoff) is no longer counted as "faltan" (you can't load it anymore).
+   */
+  status?: MatchStatus;
 }
 
 /**
@@ -106,6 +111,11 @@ export type FilterKind =
 /**
  * Derives the progress summary from the saved-prediction set.
  * cargados = number of matchIds that have an entry in savedMap (set cardinality).
+ * faltan   = matches still OPEN (editable) AND unsaved — i.e. what you can still
+ *            load. A locked match (confirmed/live/past kickoff) is no longer
+ *            counted: once the group stage is over those aren't pending work.
+ *            (When a match has no `status`, lock falls back to kickoff vs now,
+ *            preserving the original behaviour for callers that omit it.)
  * cierranHoy = matches whose kickoffAt falls within the UTC calendar day of `now`.
  */
 export function deriveProgress(
@@ -115,7 +125,11 @@ export function deriveProgress(
 ): Progress {
   const cargados = Object.keys(savedMap).length;
   const total = matches.length;
-  const faltan = total - cargados;
+  const faltan = matches.filter(
+    (m) =>
+      !(m.id in savedMap) &&
+      deriveLock({ kickoffAt: m.kickoffAt, status: m.status }, now).editable,
+  ).length;
 
   const startOfDayMs = utcStartOfDay(now);
   const endOfDayMs = startOfDayMs + 24 * 60 * 60 * 1000;

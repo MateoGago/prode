@@ -17,7 +17,7 @@ export function SignOutButton() {
       size="sm"
       disabled={isPending}
       onClick={() => startTransition(() => signOut())}
-      className="gap-2"
+      className="h-10 gap-2"
     >
       {isPending ? (
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />

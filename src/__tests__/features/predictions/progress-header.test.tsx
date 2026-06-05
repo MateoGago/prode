@@ -144,13 +144,16 @@ describe("ProgressHeader", () => {
     expect(progressBar).toBeInTheDocument();
   });
 
-  it("renders a ring showing 0% when nothing saved", () => {
+  it("reflects 0% on the progress bar when nothing saved", () => {
     const groups = makeGroups(72, KICKOFF_TOMORROW);
     renderWithProvider(groups, {}, TODAY);
-    expect(screen.getByText("0%")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "0",
+    );
   });
 
-  it("renders a ring showing the correct percentage when matches are saved", () => {
+  it("reflects the saved percentage on the progress bar", () => {
     const groups = makeGroups(72, KICKOFF_TOMORROW);
     const saved = { homeScore: 1, awayScore: 0, advancerTeamId: null };
     // 36 saved = 50%
@@ -158,6 +161,9 @@ describe("ProgressHeader", () => {
       Array.from({ length: 36 }, (_, i) => [`m${i + 1}`, saved]),
     );
     renderWithProvider(groups, savedMap, TODAY);
-    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "50",
+    );
   });
 });

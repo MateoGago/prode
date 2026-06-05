@@ -60,6 +60,13 @@ export async function confirmResultAction(
     advancerTeamId: input.advancerTeamId,
   });
 
-  revalidatePath("/admin");
+  // A confirmed result recomputes points surfaced across the home dashboard,
+  // the fixture, every group's leaderboard and the per-player breakdowns. These
+  // pages are dynamic (they read cookies), so the server already re-renders them
+  // fresh per request — but the client Router Cache can still serve a stale copy
+  // on client-side navigation. Invalidating the root layout purges that cache so
+  // the admin (and anyone navigating after) sees the recomputed standings. It
+  // does NOT push to other users in real time; they refresh as usual.
+  revalidatePath("/", "layout");
   return { ok: true, recomputed };
 }

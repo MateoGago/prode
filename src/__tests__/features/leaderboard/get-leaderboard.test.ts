@@ -22,13 +22,23 @@ describe("getLeaderboard", () => {
 
   it("returns mapped LeaderboardRow[] on success", async () => {
     const rawRows: GetLeaderboardRpcRow[] = [
-      { user_id: "u1", display_name: "Alice", total_points: 30, hits: 5 },
-      { user_id: "u2", display_name: "Bob", total_points: "20", hits: "3" },
+      {
+        user_id: "u1",
+        display_name: "Alice",
+        total_points: 30,
+        hits: 5,
+      },
+      {
+        user_id: "u2",
+        display_name: "Bob",
+        total_points: "20",
+        hits: "3",
+      },
     ];
 
     mockRpc.mockResolvedValueOnce({ data: rawRows, error: null });
 
-    const result = await getLeaderboard();
+    const result = await getLeaderboard("group-1");
 
     expect(result).toEqual([
       { playerId: "u1", playerName: "Alice", totalPoints: 30 },
@@ -36,12 +46,14 @@ describe("getLeaderboard", () => {
     ]);
   });
 
-  it("calls supabase.rpc with 'get_leaderboard'", async () => {
+  it("calls rpc with 'get_leaderboard' and { p_group_id }", async () => {
     mockRpc.mockResolvedValueOnce({ data: [], error: null });
 
-    await getLeaderboard();
+    await getLeaderboard("group-abc");
 
-    expect(mockRpc).toHaveBeenCalledWith("get_leaderboard");
+    expect(mockRpc).toHaveBeenCalledWith("get_leaderboard", {
+      p_group_id: "group-abc",
+    });
   });
 
   it("throws an Error when RPC returns an error", async () => {
@@ -50,13 +62,15 @@ describe("getLeaderboard", () => {
       error: { message: "Permission denied" },
     });
 
-    await expect(getLeaderboard()).rejects.toThrow("Permission denied");
+    await expect(getLeaderboard("group-1")).rejects.toThrow(
+      "Permission denied",
+    );
   });
 
   it("returns [] when RPC returns an empty data array", async () => {
     mockRpc.mockResolvedValueOnce({ data: [], error: null });
 
-    const result = await getLeaderboard();
+    const result = await getLeaderboard("group-1");
 
     expect(result).toEqual([]);
   });

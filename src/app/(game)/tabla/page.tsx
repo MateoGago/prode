@@ -1,40 +1,13 @@
-import { getLeaderboard, LeaderboardTable } from "@/features/leaderboard";
-import { createClient } from "@/shared/supabase/server";
+import { redirect } from "next/navigation";
 
-export default async function TablaPage() {
-  const supabase = await createClient();
-
-  // Independent reads — fetch in parallel to avoid a request waterfall.
-  const [
-    {
-      data: { user },
-    },
-    rows,
-  ] = await Promise.all([supabase.auth.getUser(), getLeaderboard()]);
-
-  // Precompute each player's href on the server — functions can't cross the
-  // RSC boundary into the client LeaderboardTable.
-  const rowsWithHref = rows.map((row) => ({
-    ...row,
-    href: `/tabla/${row.playerId}`,
-  }));
-
-  return (
-    <section className="grid gap-6">
-      <div className="grid gap-1">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight">
-          Tabla de posiciones
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Ranking acumulado de todos los jugadores.
-        </p>
-      </div>
-
-      <LeaderboardTable
-        rows={rowsWithHref}
-        highlightPlayerId={user?.id}
-        emptyMessage="Todavía no hay puntos cargados."
-      />
-    </section>
-  );
+/**
+ * /tabla is superseded by the group-scoped /g/[code]/leaderboard route (PR3).
+ *
+ * The global leaderboard was removed in the groups migration — get_leaderboard()
+ * now requires a group id. Any bookmark or old link hitting /tabla is sent to
+ * /onboarding, where the user can create or join a group and then land on the
+ * correct group leaderboard. (T-19, REQ-06, REQ-07)
+ */
+export default function TablaPage() {
+  redirect("/onboarding");
 }

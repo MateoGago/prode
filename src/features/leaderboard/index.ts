@@ -14,7 +14,9 @@ export { getLeaderboard } from "./actions/get-leaderboard";
 export { getMatchBreakdown } from "./actions/get-match-breakdown";
 export {
   mapLeaderboardRows,
+  rankByPoints,
   type GetLeaderboardRpcRow,
+  type Ranked,
 } from "./entities/leaderboard";
 export {
   mapMatchBreakdown,

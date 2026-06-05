@@ -5,45 +5,25 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/shared/lib/utils";
 
-import { NAV_ITEMS, isNavItemActive } from "./app-nav-items";
-
-/** Group-stage progress echoed onto the "Partidos" nav item ("X/72"). */
-export type PredictionsProgress = {
-  loaded: number;
-  total: number;
-};
+import { buildNavItems, isNavItemActive } from "./app-nav-items";
 
 type AppNavProps = {
   isAdmin: boolean;
-  /** Optional "X/72" badge fed from the shared getPredictionsProgress helper. */
-  predictionsProgress?: PredictionsProgress;
+  /** Active group leaderboard href for the "Tabla" item (/onboarding if none). */
+  tablaHref: string;
 };
 
-function visibleItems(isAdmin: boolean) {
-  return NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
-}
-
-/**
- * The badge is a "pending work" hint: shown only on /predicciones, only while
- * there is something left to load. It disappears at 72/72 (all done) and when
- * no progress prop is supplied — identifying the item by href, never index.
- */
-function predictionsBadge(
-  href: string,
-  progress: PredictionsProgress | undefined,
-): string | null {
-  if (href !== "/predicciones" || !progress) return null;
-  if (progress.total === 0 || progress.loaded >= progress.total) return null;
-  return `${progress.loaded}/${progress.total}`;
+function visibleItems(isAdmin: boolean, tablaHref: string) {
+  return buildNavItems(tablaHref).filter((item) => !item.adminOnly || isAdmin);
 }
 
 /**
  * Mobile bottom tab bar — fixed, blurred, safe-area aware. Hidden from md up,
  * where the sidebar takes over.
  */
-export function AppTabBar({ isAdmin, predictionsProgress }: AppNavProps) {
+export function AppTabBar({ isAdmin, tablaHref }: AppNavProps) {
   const pathname = usePathname();
-  const items = visibleItems(isAdmin);
+  const items = visibleItems(isAdmin, tablaHref);
 
   return (
     <nav
@@ -52,9 +32,8 @@ export function AppTabBar({ isAdmin, predictionsProgress }: AppNavProps) {
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/80 backdrop-blur-xl backdrop-saturate-150 md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {items.map(({ href, label, icon: Icon }) => {
-        const active = isNavItemActive(pathname, href);
-        const badge = predictionsBadge(href, predictionsProgress);
+      {items.map(({ href, label, icon: Icon, matchGroupRoutes }) => {
+        const active = isNavItemActive(pathname, href, matchGroupRoutes);
         return (
           <Link
             key={href}
@@ -76,11 +55,6 @@ export function AppTabBar({ isAdmin, predictionsProgress }: AppNavProps) {
                 aria-hidden="true"
                 strokeWidth={2.2}
               />
-              {badge ? (
-                <span className="-right-1 -top-1 absolute rounded-pill bg-primary px-1.5 py-0.5 font-bold text-[0.6rem] text-primary-foreground tabular-nums leading-none">
-                  {badge}
-                </span>
-              ) : null}
             </span>
             {label}
           </Link>
@@ -94,15 +68,14 @@ export function AppTabBar({ isAdmin, predictionsProgress }: AppNavProps) {
  * Desktop left sidebar — the same items as the tab bar, stacked vertically with
  * the active-pill pattern. Hidden below md.
  */
-export function AppSidebarNav({ isAdmin, predictionsProgress }: AppNavProps) {
+export function AppSidebarNav({ isAdmin, tablaHref }: AppNavProps) {
   const pathname = usePathname();
-  const items = visibleItems(isAdmin);
+  const items = visibleItems(isAdmin, tablaHref);
 
   return (
     <nav aria-label="Navegación principal" className="grid gap-1">
-      {items.map(({ href, label, icon: Icon }) => {
-        const active = isNavItemActive(pathname, href);
-        const badge = predictionsBadge(href, predictionsProgress);
+      {items.map(({ href, label, icon: Icon, matchGroupRoutes }) => {
+        const active = isNavItemActive(pathname, href, matchGroupRoutes);
         return (
           <Link
             key={href}
@@ -117,11 +90,6 @@ export function AppSidebarNav({ isAdmin, predictionsProgress }: AppNavProps) {
           >
             <Icon className="size-5" aria-hidden="true" strokeWidth={2.2} />
             {label}
-            {badge ? (
-              <span className="ml-auto rounded-pill bg-primary px-1.5 py-0.5 font-bold text-[0.7rem] text-primary-foreground tabular-nums leading-none">
-                {badge}
-              </span>
-            ) : null}
           </Link>
         );
       })}

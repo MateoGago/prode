@@ -58,6 +58,9 @@
   --color-winner: var(--winner);
   --color-miss: var(--miss);
   --color-live: var(--live);
+  --color-info: var(--info);
+  --color-info-deep: var(--info-deep);
+  --color-info-soft: var(--info-soft);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -134,6 +137,11 @@
   --winner: oklch(0.745 0.14 80);
   --miss: oklch(0.6 0.02 165);
   --live: oklch(0.585 0.215 25);
+
+  /* Blue accent — used for the knockout round multiplier badge. */
+  --info: oklch(0.62 0.16 250);
+  --info-deep: oklch(0.5 0.16 255);
+  --info-soft: oklch(0.95 0.04 250);
 
   --border: oklch(0.905 0.016 155);
   --border-strong: oklch(0.84 0.016 155);
@@ -214,6 +222,11 @@
   --miss: oklch(0.62 0.02 165);
   --live: oklch(0.66 0.2 26);
 
+  /* Blue accent — used for the knockout round multiplier badge. */
+  --info: oklch(0.7 0.15 250);
+  --info-deep: oklch(0.78 0.13 250);
+  --info-soft: oklch(0.33 0.08 255);
+
   --border: oklch(0.31 0.02 168);
   --border-strong: oklch(0.4 0.022 168);
   --input: oklch(0.33 0.02 168);
@@ -261,9 +274,20 @@
       ),
       radial-gradient(100% 60% at 90% 110%, var(--gol-soft) 0%, transparent 50%);
     background-attachment: fixed;
+    /*
+     * The page must NEVER scroll horizontally — only inner table/chip rows may
+     * (they opt in with their own `overflow-x-auto`). `clip` (not `hidden`)
+     * enforces this without creating a scroll container, so sticky headers and
+     * the fixed mobile tab bar keep working. On iOS a horizontally scrollable
+     * page widens the layout viewport, which is what pushes `position: fixed;
+     * bottom-0` off the bottom and leaves a gap under the tab bar — clipping the
+     * overflow here fixes both symptoms at the root.
+     */
+    overflow-x: clip;
   }
   html {
     @apply font-sans;
+    overflow-x: clip;
   }
 }
 

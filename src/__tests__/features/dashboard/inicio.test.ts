@@ -182,11 +182,17 @@ function breakdown(
 ): MatchBreakdownItem {
   return {
     matchLabel: "Brasil vs Serbia",
+    homeTeamName: "Brasil",
+    awayTeamName: "Serbia",
+    homeFlagUrl: null,
+    awayFlagUrl: null,
     predictedHomeScore: 2,
     predictedAwayScore: 1,
     actualHomeScore: 2,
     actualAwayScore: 1,
     pointsAwarded: 3,
+    hitType: "exact",
+    multiplier: 1,
     ...overrides,
   };
 }

@@ -169,7 +169,7 @@ describe("MatchCard", () => {
     expect(decrementBtn(homeStepper())).toBeDisabled();
   });
 
-  it("confirmed state: renders ConfirmedPanel with Vos/Real and a hit label", () => {
+  it("confirmed state: shows the real scoreboard, the prediction and the outcome", () => {
     const match = makeMatch({
       status: "confirmed",
       homeScore: 2,
@@ -182,10 +182,11 @@ describe("MatchCard", () => {
       prediction: { homeScore: 2, awayScore: 1, advancerTeamId: null },
     });
 
-    expect(screen.getByText("Vos")).toBeInTheDocument();
-    expect(screen.getByText("Real")).toBeInTheDocument();
-    // Exact match (predicted 2–1, real 2–1).
-    expect(screen.getByText(/exacto/i)).toBeInTheDocument();
+    // The player's prediction is surfaced in the outcome alert.
+    expect(screen.getByText(/tu pronóstico/i)).toBeInTheDocument();
+    expect(screen.getByText("2–1")).toBeInTheDocument();
+    // Exact match (predicted 2–1, real 2–1) → "Acertaste".
+    expect(screen.getByText("Acertaste")).toBeInTheDocument();
   });
 
   it("KO draw: renders the AdvancerPicker when round != group and scores are equal", () => {

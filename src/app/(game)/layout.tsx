@@ -2,18 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { AppSidebarNav, AppTabBar } from "@/features/auth/components/app-nav";
-import { getPredictionsProgress } from "@/features/predictions";
 import { createClient } from "@/shared/supabase/server";
 
 function Wordmark() {
   return (
     <Link
       href="/"
-      className="font-[family-name:var(--font-display)] text-lg font-bold tracking-[0.02em]"
+      className="font-heading text-xl font-extrabold tracking-tight text-foreground"
     >
-      PRODE
+      Pro<span className="text-primary">Debates</span>
     </Link>
   );
 }
@@ -32,18 +32,29 @@ export default async function GameLayout({
 }: {
   children: ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, display_name")
-    .eq("id", user.id)
-    .maybeSingle();
+  // profile (role + name) and the first-group lookup only need user.id and are
+  // independent of each other — run them together, not as a waterfall. The
+  // "Tabla" nav links straight to the user's first group leaderboard (RLS scopes
+  // the query); it falls back to /onboarding when the user has no groups.
+  const supabase = await createClient();
+  const [profileRes, firstGroupRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("role, display_name")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("groups")
+      .select("invite_code")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const profile = profileRes.data;
   const isAdmin = profile?.role === "admin";
 
   const displayName =
@@ -51,7 +62,10 @@ export default async function GameLayout({
     (user.user_metadata?.display_name as string | undefined) ??
     "Jugador";
 
-  const predictionsProgress = await getPredictionsProgress(user.id);
+  const firstGroup = firstGroupRes.data;
+  const tablaHref = firstGroup?.invite_code
+    ? `/g/${firstGroup.invite_code}/leaderboard`
+    : "/onboarding";
 
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
@@ -60,10 +74,7 @@ export default async function GameLayout({
         <div className="px-2">
           <Wordmark />
         </div>
-        <AppSidebarNav
-          isAdmin={isAdmin}
-          predictionsProgress={predictionsProgress}
-        />
+        <AppSidebarNav isAdmin={isAdmin} tablaHref={tablaHref} />
         <div className="mt-auto grid gap-3 border-t border-border pt-4">
           <div className="flex items-center gap-2.5 px-1">
             <span className="truncate text-sm font-medium">{displayName}</span>
@@ -85,7 +96,7 @@ export default async function GameLayout({
         </main>
       </div>
 
-      <AppTabBar isAdmin={isAdmin} predictionsProgress={predictionsProgress} />
+      <AppTabBar isAdmin={isAdmin} tablaHref={tablaHref} />
     </div>
   );
 }

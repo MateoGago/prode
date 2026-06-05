@@ -149,11 +149,16 @@ export function PredictionsProvider({
   >({});
   const [pending, startTransition] = useTransition();
 
-  // All matches flattened (needed for deriveProgress's BoardMatch array)
+  // All matches flattened (needed for deriveProgress's BoardMatch array).
+  // status is forwarded so deriveProgress can drop locked matches from "faltan".
   const allMatches = useMemo(
     () =>
       groups.flatMap((g) =>
-        g.matches.map((m) => ({ id: m.id, kickoffAt: m.kickoffAt })),
+        g.matches.map((m) => ({
+          id: m.id,
+          kickoffAt: m.kickoffAt,
+          status: m.status,
+        })),
       ),
     [groups],
   );

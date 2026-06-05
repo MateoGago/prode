@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -290,6 +290,35 @@ describe("LeaderboardTable", () => {
     expect(screen.getByTestId("position-badge-t3")).toBeInTheDocument();
   });
 
+  it("podium player with href renders as a link inside the podium region", () => {
+    const rowsWithHref: LeaderboardRow[] = [
+      {
+        playerId: "u1",
+        playerName: "Alice",
+        totalPoints: 30,
+        href: "/tabla/u1",
+      },
+      { playerId: "u2", playerName: "Bob", totalPoints: 20, href: "/tabla/u2" },
+      { playerId: "u3", playerName: "Charlie", totalPoints: 10 },
+    ];
+    render(<LeaderboardTable rows={rowsWithHref} />);
+
+    const podium = screen.getByRole("region", { name: /podio/i });
+
+    // Alice (rank 1) and Bob (rank 2) have hrefs — should be links
+    const aliceLink = screen.getAllByRole("link", { name: "Alice" })[0];
+    expect(podium).toContainElement(aliceLink);
+    expect(aliceLink).toHaveAttribute("href", "/tabla/u1");
+
+    const bobLink = screen.getAllByRole("link", { name: "Bob" })[0];
+    expect(podium).toContainElement(bobLink);
+    expect(bobLink).toHaveAttribute("href", "/tabla/u2");
+
+    // Charlie has no href — should NOT be a link inside the podium
+    expect(podium).toHaveTextContent("Charlie");
+    expect(screen.queryByRole("link", { name: "Charlie" })).toBeNull();
+  });
+
   it("podium renders when points differ (top player has more than the rest)", () => {
     const withSpread: LeaderboardRow[] = [
       { playerId: "s1", playerName: "Leader", totalPoints: 50 },
@@ -307,5 +336,96 @@ describe("LeaderboardTable", () => {
 
     // Rank 4 in flat list
     expect(screen.getByTestId("position-badge-s4")).toHaveTextContent("4");
+  });
+});
+
+// ── Manage mode: owner-only remove controls (podium + list) ──────────────────
+
+describe("LeaderboardTable — manage mode", () => {
+  // 4 rows with a points spread: ranks 1-3 land in the podium, rank 4 in the list.
+  const rows: LeaderboardRow[] = [
+    { playerId: "owner", playerName: "Alice", totalPoints: 30 },
+    { playerId: "u2", playerName: "Bob", totalPoints: 20 },
+    { playerId: "u3", playerName: "Charlie", totalPoints: 10 },
+    { playerId: "u4", playerName: "Diana", totalPoints: 5 },
+  ];
+
+  it("owner in manage mode sees a remove control for a list member, and clicking it fires onRemoveMember", () => {
+    const onRemoveMember = vi.fn();
+    render(
+      <LeaderboardTable
+        rows={rows}
+        manageMode
+        ownerId="owner"
+        currentUserId="owner"
+        onRemoveMember={onRemoveMember}
+      />,
+    );
+
+    const removeDiana = screen.getByRole("button", { name: /echar a diana/i });
+    fireEvent.click(removeDiana);
+
+    expect(onRemoveMember).toHaveBeenCalledWith("u4", "Diana");
+  });
+
+  it("never shows a remove control for the owner themselves", () => {
+    render(
+      <LeaderboardTable
+        rows={rows}
+        manageMode
+        ownerId="owner"
+        currentUserId="owner"
+        onRemoveMember={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /echar a alice/i })).toBeNull();
+  });
+
+  it("shows remove controls for podium members (not just the list)", () => {
+    render(
+      <LeaderboardTable
+        rows={rows}
+        manageMode
+        ownerId="owner"
+        currentUserId="owner"
+        onRemoveMember={vi.fn()}
+      />,
+    );
+
+    // Bob (rank 2) and Charlie (rank 3) live in the podium, not the list.
+    expect(
+      screen.getByRole("button", { name: /echar a bob/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /echar a charlie/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no remove controls when manage mode is off", () => {
+    render(
+      <LeaderboardTable
+        rows={rows}
+        ownerId="owner"
+        currentUserId="owner"
+        onRemoveMember={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /echar a/i })).toBeNull();
+  });
+
+  it("shows no remove controls when the viewer is not the owner", () => {
+    render(
+      <LeaderboardTable
+        rows={rows}
+        manageMode
+        ownerId="owner"
+        currentUserId="u2"
+        onRemoveMember={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /echar a/i })).toBeNull();
   });
 });

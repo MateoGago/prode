@@ -11,8 +11,11 @@ import type { PredictionProgress } from "../entities/predictions-board";
  *  - `loaded` = the user's saved predictions on those group-stage matches, so
  *    `loaded ≤ total` always holds (knockout predictions never inflate it).
  *
- * A lightweight count read (head + count: 'exact'); deriveProgress needs full
- * arrays and is overkill for a denominator/numerator pair.
+ * Two lightweight count reads (head + count: 'exact'): the group-stage total and
+ * the user's predictions on those matches. `loaded` filters predictions by the
+ * embedded match's round via an inner join, so we never round-trip the ~72 match
+ * ids back to JS just to feed an `.in()`. deriveProgress needs full arrays and is
+ * overkill for a denominator/numerator pair.
  */
 export async function getPredictionsProgress(
   userId: string,
@@ -27,26 +30,15 @@ export async function getPredictionsProgress(
     throw new Error(`count group matches failed: ${totalError.message}`);
   }
 
-  // No group-stage match ids → nothing can be loaded; skip the second read.
   if (!total) return { loaded: 0, total: 0 };
 
-  const { data: groupMatches, error: idsError } = await supabase
-    .from("matches")
-    .select("id")
-    .eq("round", "group");
-  if (idsError) {
-    throw new Error(`load group match ids failed: ${idsError.message}`);
-  }
-
-  const groupMatchIds = ((groupMatches ?? []) as { id: string }[]).map(
-    (m) => m.id,
-  );
-
+  // predictions → matches is N:1, so the inner join yields one row per
+  // prediction; counting it gives the user's group-stage predictions directly.
   const { count: loaded, error: loadedError } = await supabase
     .from("predictions")
-    .select("*", { count: "exact", head: true })
+    .select("match_id, matches!inner(round)", { count: "exact", head: true })
     .eq("user_id", userId)
-    .in("match_id", groupMatchIds);
+    .eq("matches.round", "group");
   if (loadedError) {
     throw new Error(`count loaded predictions failed: ${loadedError.message}`);
   }

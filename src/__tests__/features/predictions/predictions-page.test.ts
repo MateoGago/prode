@@ -5,10 +5,13 @@ import {
   buildPredictionsByMatchId,
   groupMatches,
   groupMatchesByDay,
+  groupMatchesByRound,
   mapMatchRow,
+  selectNextScheduledMatch,
   type MatchWithTeamsRow,
   normalizeTeamRelation,
   type PredictionReadRow,
+  shouldCollapseDayByDefault,
   type TeamJoinRow,
 } from "@/features/predictions/entities/predictions-page";
 
@@ -260,5 +263,147 @@ describe("groupMatchesByDay", () => {
     const days = groupMatchesByDay([groupMatch({ id: "ko", round: "r16" })]);
 
     expect(days.flatMap((d) => d.matches.map((m) => m.id))).toEqual(["ko"]);
+  });
+});
+
+describe("selectNextScheduledMatch", () => {
+  it("returns the soonest-kickoff scheduled match with teams", () => {
+    const next = selectNextScheduledMatch([
+      groupMatch({
+        id: "confirmed-early",
+        status: "confirmed",
+        kickoffAt: new Date("2026-06-11T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "scheduled-late",
+        status: "scheduled",
+        kickoffAt: new Date("2026-07-01T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "scheduled-soon",
+        status: "scheduled",
+        kickoffAt: new Date("2026-06-28T19:00:00.000Z"),
+      }),
+    ]);
+
+    expect(next?.id).toBe("scheduled-soon");
+  });
+
+  it("ignores matches without resolved teams", () => {
+    const next = selectNextScheduledMatch([
+      groupMatch({
+        id: "tbd",
+        status: "scheduled",
+        homeTeam: null,
+        awayTeam: null,
+        kickoffAt: new Date("2026-06-28T19:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "real",
+        status: "scheduled",
+        kickoffAt: new Date("2026-07-01T19:00:00.000Z"),
+      }),
+    ]);
+
+    expect(next?.id).toBe("real");
+  });
+
+  it("returns null when nothing is scheduled", () => {
+    expect(
+      selectNextScheduledMatch([groupMatch({ id: "a", status: "confirmed" })]),
+    ).toBeNull();
+  });
+});
+
+describe("groupMatchesByRound", () => {
+  it("buckets resolved knockout matches by round in bracket order, skipping group", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({ id: "g1", round: "group" }),
+      groupMatch({ id: "qf1", round: "qf" }),
+      groupMatch({ id: "r32a", round: "r32" }),
+    ]);
+
+    expect(rounds.map((r) => r.round)).toEqual(["r32", "qf"]);
+  });
+
+  it("excludes knockout matches whose teams are not resolved yet", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({ id: "filled", round: "r32" }),
+      groupMatch({
+        id: "tbd",
+        round: "r32",
+        homeTeam: null,
+        awayTeam: null,
+        homePlaceholder: "W74",
+        awayPlaceholder: "W77",
+      }),
+    ]);
+
+    expect(rounds).toHaveLength(1);
+    expect(rounds[0].matches.map((m) => m.id)).toEqual(["filled"]);
+  });
+
+  it("carries the round label and per-round multiplier", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({ id: "r32a", round: "r32" }),
+      groupMatch({ id: "r16a", round: "r16" }),
+    ]);
+
+    expect(rounds[0]).toMatchObject({
+      round: "r32",
+      label: "16avos",
+      multiplier: 1,
+    });
+    expect(rounds[1]).toMatchObject({
+      round: "r16",
+      label: "Octavos",
+      multiplier: 2,
+    });
+  });
+
+  it("orders matches within a round by kickoff instant", () => {
+    const rounds = groupMatchesByRound([
+      groupMatch({
+        id: "late",
+        round: "r32",
+        kickoffAt: new Date("2026-06-30T22:00:00.000Z"),
+      }),
+      groupMatch({
+        id: "early",
+        round: "r32",
+        kickoffAt: new Date("2026-06-30T16:00:00.000Z"),
+      }),
+    ]);
+
+    expect(rounds[0].matches.map((m) => m.id)).toEqual(["early", "late"]);
+  });
+});
+
+describe("shouldCollapseDayByDefault", () => {
+  // now = 2026-06-15 09:00 ART (12:00 UTC). AR today = 15, AR yesterday = 14.
+  const now = new Date("2026-06-15T12:00:00.000Z");
+
+  it("keeps today expanded", () => {
+    expect(shouldCollapseDayByDefault("2026-06-15", now)).toBe(false);
+  });
+
+  it("keeps yesterday expanded", () => {
+    expect(shouldCollapseDayByDefault("2026-06-14", now)).toBe(false);
+  });
+
+  it("collapses days before yesterday", () => {
+    expect(shouldCollapseDayByDefault("2026-06-13", now)).toBe(true);
+    expect(shouldCollapseDayByDefault("2026-06-01", now)).toBe(true);
+  });
+
+  it("keeps future days expanded", () => {
+    expect(shouldCollapseDayByDefault("2026-06-20", now)).toBe(false);
+  });
+
+  it("uses the AR calendar day, not UTC, to resolve 'yesterday'", () => {
+    // 02:00 UTC Jun 15 = 23:00 ART Jun 14 → AR today = 14, AR yesterday = 13.
+    const lateNight = new Date("2026-06-15T02:00:00.000Z");
+    expect(shouldCollapseDayByDefault("2026-06-13", lateNight)).toBe(false); // yesterday
+    expect(shouldCollapseDayByDefault("2026-06-12", lateNight)).toBe(true); // before
   });
 });
