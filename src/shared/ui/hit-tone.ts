@@ -20,10 +20,3 @@ export const HIT_TEXT_CLASS: Record<HitType, string> = {
   winner: "text-warn-deep",
   miss: "text-muted-foreground",
 };
-
-/** Solid badge style per outcome (the small "EXACTO / GANADOR / ERRÓ" chip). */
-export const HIT_BADGE_CLASS: Record<HitType, string> = {
-  exact: "bg-primary text-primary-foreground",
-  winner: "bg-winner text-[oklch(0.28_0.06_80)]",
-  miss: "bg-card-muted text-muted-foreground",
-};

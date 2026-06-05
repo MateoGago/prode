@@ -51,7 +51,6 @@ export default async function HomePage() {
       : null;
 
   // Per-group standings — position/points are group-scoped (decision B).
-  // Rendered by InicioContent right under the greeting (groupsSlot).
   const groupsSection = (
     <section className="grid gap-3">
       <div className="flex items-center justify-between gap-3">

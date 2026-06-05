@@ -16,8 +16,6 @@ import {
 import type { Match } from "@/features/fixtures/entities/match";
 
 export interface DashboardData {
-  // TODO(prode-groups PR4): home hub — replace with per-group stats from
-  // listMyGroups(). Global position/points removed (no global leaderboard).
   totalMatches: number;
   /** Confirmed predictions the player has scored — "jugados" numerator. */
   played: number;
