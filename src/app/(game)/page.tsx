@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { getDashboard } from "@/features/dashboard";
 import {
   InicioContent,
@@ -10,27 +11,25 @@ import {
 import { listMyGroups } from "@/features/groups/actions/list-my-groups";
 import { GroupCard } from "@/features/groups/components/group-card";
 import { formatKickoffLong } from "@/shared/datetime";
-import { createClient } from "@/shared/supabase/server";
 import { Button } from "@/shared/ui/button";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // If user has no groups, force them into onboarding (REQ-07, decision B).
-  const groups = await listMyGroups();
+  // The group list and the dashboard are independent reads — fetch in parallel.
+  // The empty-groups gate (REQ-07, decision B) still wins: a wasted dashboard
+  // fetch on the rare no-groups path is cheaper than serializing both reads.
+  const [groups, dashboard] = await Promise.all([
+    listMyGroups(),
+    getDashboard(user.id),
+  ]);
   if (groups.length === 0) redirect("/onboarding");
 
   const displayName =
     (user.user_metadata?.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
     "crack";
-
-  const dashboard = await getDashboard(user.id);
 
   const subline =
     dashboard.pendingPredictions > 0

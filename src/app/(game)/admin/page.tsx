@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { confirmResultAction } from "@/features/results";
 import { ConfirmResultForm } from "@/features/results";
 import { selectCorrectableMatches } from "@/features/results/actions/select-correctable-matches";
@@ -13,12 +14,10 @@ import { formatKickoffLong } from "@/shared/datetime";
 import { formatPlaceholder } from "@/features/tournament/entities/bracket";
 
 export default async function AdminPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")

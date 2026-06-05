@@ -11,8 +11,9 @@
  * summary SQL view or a batch RPC when group/member count grows.
  */
 
-import { createClient } from "@/shared/supabase/server";
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
+import { createClient } from "@/shared/supabase/server";
 
 export interface GroupSummary {
   groupId: string;
@@ -34,13 +35,10 @@ type GroupMemberRow = {
 };
 
 export async function listMyGroups(): Promise<GroupSummary[]> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) return [];
+
+  const supabase = await createClient();
 
   const { data: memberships, error } = await supabase
     .from("group_members")

@@ -1,9 +1,9 @@
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { GroupInviteButton } from "@/features/groups/components/group-invite-button";
 import { GroupLeaderboard } from "@/features/groups/components/group-leaderboard";
 import { JoinedToast } from "@/features/groups/components/joined-toast";
 import { resolveActiveGroup } from "@/features/groups/actions/resolve-active-group";
 import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
-import { createClient } from "@/shared/supabase/server";
 
 /**
  * Group-scoped leaderboard page — /g/[code]/leaderboard (T-17, REQ-04, REQ-06).
@@ -31,13 +31,10 @@ export default async function GroupLeaderboardPage({
 
   const { groupId, group } = await resolveActiveGroup(code);
 
-  const supabase = await createClient();
-
-  const [rows, { data: authData }] = await Promise.all([
+  const [rows, user] = await Promise.all([
     getLeaderboard(groupId),
-    supabase.auth.getUser(),
+    getCurrentUser(),
   ]);
-  const user = authData.user;
 
   // Attach breakdown hrefs so player names are clickable (REQ-05).
   const rowsWithHrefs = rows.map((row) => ({

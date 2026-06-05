@@ -18,6 +18,7 @@
 
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { createClient } from "@/shared/supabase/server";
 import type { Group } from "../entities/membership";
 
@@ -47,9 +48,7 @@ export const resolveActiveGroup = cache(async function resolveActiveGroup(
     redirect("/grupo-no-encontrado");
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
