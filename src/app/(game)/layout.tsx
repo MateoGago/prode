@@ -11,9 +11,9 @@ function Wordmark() {
   return (
     <Link
       href="/"
-      className="font-[family-name:var(--font-display)] text-lg font-bold tracking-[0.02em]"
+      className="font-heading text-xl font-extrabold tracking-tight text-foreground"
     >
-      PRODE
+      Pro<span className="text-primary">Debates</span>
     </Link>
   );
 }

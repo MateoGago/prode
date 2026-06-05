@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { appDescription, appName, pwaThemeColor } from "@/app/pwa-metadata";
+import { PwaServiceWorker } from "@/app/pwa-service-worker";
 import { Toaster } from "@/shared/ui/sonner";
 
 const geistSans = Geist({
@@ -20,8 +22,28 @@ const display = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Prode Mundial 2026",
-  description: "Predecí los partidos del Mundial 2026 y ganale a tus amigos.",
+  title: appName,
+  description: appDescription,
+  applicationName: appName,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: appName,
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: pwaThemeColor,
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -35,6 +57,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <PwaServiceWorker />
         {children}
         <Toaster richColors position="top-center" />
       </body>
