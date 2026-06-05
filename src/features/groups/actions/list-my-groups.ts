@@ -13,6 +13,7 @@
 
 import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { getLeaderboard } from "@/features/leaderboard/actions/get-leaderboard";
+import { rankByPoints } from "@/features/leaderboard/entities/leaderboard";
 import { createClient } from "@/shared/supabase/server";
 
 export interface GroupSummary {
@@ -57,35 +58,16 @@ export async function listMyGroups(): Promise<GroupSummary[]> {
     rows.map(async (m) => {
       const g = m.groups;
       const leaderboard = await getLeaderboard(g.id);
-
-      // Derive position (dense rank, DESC points) and the caller's points.
-      const sorted = [...leaderboard].sort(
-        (a, b) => b.totalPoints - a.totalPoints,
+      const own = rankByPoints(leaderboard).find(
+        (row) => row.playerId === user.id,
       );
-
-      let rank = 0;
-      let lastPoints: number | null = null;
-      let callerPosition: number | null = null;
-      let callerPoints = 0;
-
-      for (let i = 0; i < sorted.length; i++) {
-        const row = sorted[i];
-        if (lastPoints === null || row.totalPoints !== lastPoints) {
-          rank = i + 1;
-          lastPoints = row.totalPoints;
-        }
-        if (row.playerId === user.id) {
-          callerPosition = rank;
-          callerPoints = row.totalPoints;
-        }
-      }
 
       return {
         groupId: g.id,
         name: g.name,
         inviteCode: g.invite_code,
-        position: callerPosition,
-        points: callerPoints,
+        position: own?.rank ?? null,
+        points: own?.totalPoints ?? 0,
       } satisfies GroupSummary;
     }),
   );

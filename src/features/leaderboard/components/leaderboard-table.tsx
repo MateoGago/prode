@@ -7,6 +7,7 @@ import { UserMinus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { useReveal } from "@/shared/motion";
+import { rankByPoints } from "../entities/leaderboard";
 
 export type RemoveMemberHandler = (
   playerId: string,
@@ -66,23 +67,6 @@ export type LeaderboardTableProps = {
 type RankedLeaderboardRow = LeaderboardRow & {
   rank: number;
 };
-
-function getRankedRows(rows: LeaderboardRow[]): RankedLeaderboardRow[] {
-  const sortedRows = [...rows].sort((a, b) => b.totalPoints - a.totalPoints);
-  let lastPoints: number | null = null;
-  let lastRank = 0;
-
-  return sortedRows.map((row, index) => {
-    const rank = lastPoints === row.totalPoints ? lastRank : index + 1;
-    lastPoints = row.totalPoints;
-    lastRank = rank;
-
-    return {
-      ...row,
-      rank,
-    };
-  });
-}
 
 /** Derives two-letter initials from a display name. */
 function getInitials(name: string): string {
@@ -337,7 +321,7 @@ export function LeaderboardTable({
     );
   }
 
-  const rankedRows = getRankedRows(rows);
+  const rankedRows: RankedLeaderboardRow[] = rankByPoints(rows);
 
   // Podium: only show when there are ≥3 rows AND players are NOT all tied on
   // the same points (e.g. season start at 0 should be a flat list, not a
