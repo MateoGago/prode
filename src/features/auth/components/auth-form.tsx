@@ -19,6 +19,7 @@ import { Input } from "@/shared/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 
 import {
+  type AuthActionState,
   signInWithGoogle,
   signInWithPassword,
   signUpWithPassword,
@@ -66,20 +67,25 @@ export function AuthForm({ next }: { next?: string }) {
     defaultValues: { displayName: "", email: "", password: "" },
   });
 
+  // A returned state always means the action did NOT redirect — surface it.
+  // "error" → red toast, "info" (e.g. confirm-your-email) → blue info toast.
+  function notify(result: AuthActionState | undefined) {
+    if (!result) return;
+    if (result.status === "error") toast.error(result.message);
+    else toast.info(result.message);
+  }
+
   async function onLogin(values: LoginInput) {
-    const result = await signInWithPassword(values, next);
-    if (result?.error) toast.error(result.error);
+    notify(await signInWithPassword(values, next));
   }
 
   async function onSignup(values: SignupInput) {
-    const result = await signUpWithPassword(values, next);
-    if (result?.error) toast.error(result.error);
+    notify(await signUpWithPassword(values, next));
   }
 
   function onGoogle() {
     startGoogle(async () => {
-      const result = await signInWithGoogle(next);
-      if (result?.error) toast.error(result.error);
+      notify(await signInWithGoogle(next));
     });
   }
 

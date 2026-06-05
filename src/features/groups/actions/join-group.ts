@@ -3,16 +3,17 @@
 /**
  * joinGroup — resolves an invite code and enrolls the current user.
  *
- * Idempotent: upsert with ignoreDuplicates means re-joining is a no-op at the
- * DB level. A 23505 unique-violation (belt-and-suspenders) is also treated as
- * silent success per REQ-02.
- * Returns a discriminated union — never throws on domain failures.
+ * Delegates to the `join_group(p_code)` SECURITY DEFINER RPC. That function is
+ * required because the groups SELECT policy (groups_select_member) only exposes
+ * groups the caller already belongs to — so looking the group up with the user's
+ * own session BEFORE membership existed always returned null for invitees. The
+ * RPC bypasses that membership gate, inserts the membership ON CONFLICT DO
+ * NOTHING (idempotent re-join), and returns the invite_code — or NULL for an
+ * unknown code. Returns a discriminated union — never throws on domain failures.
  */
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/supabase/server";
-
-const UNIQUE_VIOLATION = "23505";
 
 export type JoinGroupResult =
   | { ok: true; code: string }
@@ -29,35 +30,18 @@ export async function joinGroup(code: string): Promise<JoinGroupResult> {
     return { ok: false, reason: "unauthenticated" };
   }
 
-  const { data: group, error: lookupErr } = await supabase
-    .from("groups")
-    .select("id, invite_code")
-    .eq("invite_code", code)
-    .maybeSingle();
+  const { data: resolvedCode, error } = await supabase.rpc("join_group", {
+    p_code: code,
+  });
 
-  if (lookupErr) {
-    throw new Error(lookupErr.message);
+  if (error) {
+    throw new Error(error.message);
   }
 
-  if (!group) {
+  if (!resolvedCode) {
     return { ok: false, reason: "invalid_code" };
   }
 
-  const { error: memberErr } = await supabase
-    .from("group_members")
-    .upsert(
-      { group_id: group.id, user_id: user.id },
-      { onConflict: "group_id,user_id", ignoreDuplicates: true },
-    );
-
-  // unique_violation: user is already a member — silent success (REQ-02).
-  if (memberErr && memberErr.code !== UNIQUE_VIOLATION) {
-    throw new Error(memberErr.message);
-  }
-
   revalidatePath("/");
-  return {
-    ok: true,
-    code: (group as { id: string; invite_code: string }).invite_code,
-  };
+  return { ok: true, code: resolvedCode as string };
 }
