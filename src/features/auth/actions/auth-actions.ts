@@ -101,7 +101,10 @@ export async function signUpWithPassword(
   // If "Confirm email" is enabled in Supabase, no session is returned yet.
   // This is NOT a failure — it is an informational next-step for the user.
   if (!data.session) {
-    return { status: "info", message: "Te enviamos un email para confirmar tu cuenta." };
+    return {
+      status: "info",
+      message: "Te enviamos un email para confirmar tu cuenta.",
+    };
   }
 
   revalidatePath("/", "layout");

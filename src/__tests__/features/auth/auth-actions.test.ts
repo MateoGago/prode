@@ -23,7 +23,9 @@ vi.mock("@/shared/supabase/server", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("next/headers", () => ({
-  headers: vi.fn().mockResolvedValue(new Map([["origin", "https://prode.app"]])),
+  headers: vi
+    .fn()
+    .mockResolvedValue(new Map([["origin", "https://prode.app"]])),
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
