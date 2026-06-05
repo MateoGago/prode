@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/features/auth/actions/get-current-user";
-import { confirmResultAction } from "@/features/results";
-import { ConfirmResultForm } from "@/features/results";
+import { confirmResultAction } from "@/features/results/actions/confirm-result-action";
+import { ConfirmResultForm } from "@/features/results/components/confirm-result-form";
 import { selectCorrectableMatches } from "@/features/results/actions/select-correctable-matches";
 import { selectUnresolvedKnockoutSlots } from "@/features/results/actions/select-unresolved-slots";
 import { resolveSlotAction } from "@/features/results/actions/resolve-slot-action";

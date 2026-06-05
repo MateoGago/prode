@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { PredictionsPageClient } from "@/features/predictions";
+import { PredictionsPageClient } from "@/features/predictions/components/predictions-page-client";
 import {
   buildPredictionsByMatchId,
   groupMatches,

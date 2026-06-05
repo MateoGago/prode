@@ -1,6 +1,6 @@
-import { getMatchBreakdown } from "@/features/leaderboard";
-import { getPredictionsProgress } from "@/features/predictions";
-import type { PredictionProgress } from "@/features/predictions";
+import { getMatchBreakdown } from "@/features/leaderboard/actions/get-match-breakdown";
+import { getPredictionsProgress } from "@/features/predictions/actions/get-predictions-progress";
+import type { PredictionProgress } from "@/features/predictions/entities/predictions-board";
 import {
   mapMatchRow,
   type MatchWithTeamsRow,
