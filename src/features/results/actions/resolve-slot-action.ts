@@ -8,7 +8,7 @@
  * service_role) because this write does NOT need to bypass any trigger.
  */
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import type { Match, Team } from "@/features/fixtures/entities/match";
 import { createClient } from "@/shared/supabase/server";
@@ -103,6 +103,10 @@ export async function resolveSlotAction(
 
   revalidatePath("/fixture");
   revalidatePath("/admin");
+  // Resolving a bracket slot changes the cached global matches (a team now fills
+  // a knockout slot). expire:0 = immediate expiration so the next fixture/admin
+  // render reflects it, consistent with confirm-result-action.
+  revalidateTag("matches", { expire: 0 });
 
   return {
     ok: true,

@@ -1,10 +1,8 @@
+import { getCachedMatchesWithTeams } from "@/features/fixtures/actions/get-global-matches";
 import { getMatchBreakdown } from "@/features/leaderboard/actions/get-match-breakdown";
 import { getPredictionsProgress } from "@/features/predictions/actions/get-predictions-progress";
 import type { PredictionProgress } from "@/features/predictions/entities/predictions-board";
-import {
-  mapMatchRow,
-  type MatchWithTeamsRow,
-} from "@/features/predictions/entities/predictions-page";
+import { mapMatchRow } from "@/features/predictions/entities/predictions-page";
 import { createClient } from "@/shared/supabase/server";
 
 import {
@@ -40,42 +38,23 @@ export async function getDashboard(
 ): Promise<DashboardData> {
   const supabase = await createClient();
 
-  // Independent reads — run in parallel to avoid a request waterfall.
-  const [matchesResult, predictionsResult, breakdown, predictionsProgress] =
+  // Independent reads — run in parallel to avoid a request waterfall. Matches
+  // are GLOBAL (cross-request cached); the rest are per-user RLS reads.
+  const [matchesRows, predictionsResult, breakdown, predictionsProgress] =
     await Promise.all([
-      supabase
-        .from("matches")
-        .select(
-          `
-          id, external_ref, round, multiplier, matchday,
-          home_placeholder, away_placeholder, kickoff_at, status,
-          home_score, away_score, result_confirmed_at,
-          home_team:teams!matches_home_team_id_fkey (
-            id, external_ref, name, group_label, flag_url
-          ),
-          away_team:teams!matches_away_team_id_fkey (
-            id, external_ref, name, group_label, flag_url
-          )
-        `,
-        )
-        .order("kickoff_at", { ascending: true }),
+      getCachedMatchesWithTeams(),
       supabase.from("predictions").select("match_id").eq("user_id", userId),
       getMatchBreakdown(userId),
       getPredictionsProgress(userId),
     ]);
 
-  if (matchesResult.error) {
-    throw new Error(`load matches failed: ${matchesResult.error.message}`);
-  }
   if (predictionsResult.error) {
     throw new Error(
       `load predictions failed: ${predictionsResult.error.message}`,
     );
   }
 
-  const matches = ((matchesResult.data ?? []) as MatchWithTeamsRow[]).map(
-    mapMatchRow,
-  );
+  const matches = matchesRows.map(mapMatchRow);
   const predictedMatchIds = new Set(
     ((predictionsResult.data ?? []) as { match_id: string }[]).map(
       (r) => r.match_id,
