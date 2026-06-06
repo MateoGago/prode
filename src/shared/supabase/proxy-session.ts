@@ -50,8 +50,16 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user && !isPublicPath(request.nextUrl.pathname)) {
+    // Carry the originally-requested path as ?next so the user returns to it
+    // after auth (e.g. an invite link /join/<code>) instead of landing on /.
+    // Without this the proxy bounces to a bare /login and the destination is
+    // lost — the route handler's own next-preserving redirect never runs,
+    // because the proxy intercepts the request first.
+    const destination = request.nextUrl.pathname + request.nextUrl.search;
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", destination);
     return NextResponse.redirect(loginUrl);
   }
 
