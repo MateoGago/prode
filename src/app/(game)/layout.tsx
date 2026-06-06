@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { AppSidebarNav, AppTabBar } from "@/features/auth/components/app-nav";
 import { createClient } from "@/shared/supabase/server";
+import { NavProgressProvider } from "@/shared/ui/nav-progress";
 
 function Wordmark() {
   return (
@@ -68,35 +69,39 @@ export default async function GameLayout({
     : "/onboarding";
 
   return (
-    <div className="flex min-h-dvh flex-col md:flex-row">
-      {/* Desktop: persistent left sidebar. */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r border-border bg-background/60 px-4 py-6 backdrop-blur md:flex">
-        <div className="px-2">
-          <Wordmark />
-        </div>
-        <AppSidebarNav isAdmin={isAdmin} tablaHref={tablaHref} />
-        <div className="mt-auto grid gap-3 border-t border-border pt-4">
-          <div className="flex items-center gap-2.5 px-1">
-            <span className="truncate text-sm font-medium">{displayName}</span>
+    <NavProgressProvider>
+      <div className="flex min-h-dvh flex-col md:flex-row">
+        {/* Desktop: persistent left sidebar. */}
+        <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r border-border bg-background/60 px-4 py-6 backdrop-blur md:flex">
+          <div className="px-2">
+            <Wordmark />
           </div>
+          <AppSidebarNav isAdmin={isAdmin} tablaHref={tablaHref} />
+          <div className="mt-auto grid gap-3 border-t border-border pt-4">
+            <div className="flex items-center gap-2.5 px-1">
+              <span className="truncate text-sm font-medium">
+                {displayName}
+              </span>
+            </div>
+            <SignOutButton />
+          </div>
+        </aside>
+
+        {/* Mobile: slim sticky top header. */}
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl md:hidden">
+          <Wordmark />
           <SignOutButton />
+        </header>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Bottom padding clears the fixed mobile tab bar; md drops it. */}
+          <main className="container-app flex-1 py-6 pb-24 md:py-10 md:pb-10">
+            {children}
+          </main>
         </div>
-      </aside>
 
-      {/* Mobile: slim sticky top header. */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl md:hidden">
-        <Wordmark />
-        <SignOutButton />
-      </header>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Bottom padding clears the fixed mobile tab bar; md drops it. */}
-        <main className="container-app flex-1 py-6 pb-24 md:py-10 md:pb-10">
-          {children}
-        </main>
+        <AppTabBar isAdmin={isAdmin} tablaHref={tablaHref} />
       </div>
-
-      <AppTabBar isAdmin={isAdmin} tablaHref={tablaHref} />
-    </div>
+    </NavProgressProvider>
   );
 }

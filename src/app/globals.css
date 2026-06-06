@@ -391,6 +391,83 @@ body:has([data-save-drawer]) [data-app-tab-bar] {
   }
 }
 
+/*
+ * Navigation feedback (see shared/ui/nav-progress.tsx).
+ *
+ * Top progress bar: fixed above the sticky mobile header (z-30) and tab bar
+ * (z-40). Starts invisible at scaleX(0); when a navigation is pending it eases
+ * toward 90% (never 100% — the route swap clears it). The 100ms animation-delay
+ * means a fast, prefetched navigation completes before the bar ever shows.
+ */
+.nav-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 50;
+  height: 2.5px;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--primary), var(--primary-deep));
+  transition: opacity 200ms ease;
+}
+
+.nav-progress[data-active] {
+  opacity: 1;
+  animation: nav-progress-grow 2.4s var(--ease-bounce) forwards;
+  animation-delay: 100ms;
+}
+
+@keyframes nav-progress-grow {
+  0% {
+    transform: scaleX(0);
+  }
+  55% {
+    transform: scaleX(0.7);
+  }
+  100% {
+    transform: scaleX(0.9);
+  }
+}
+
+/*
+ * Inline link pending dot: always rendered (reserves its space with
+ * visibility:hidden) so toggling it never shifts layout. Fades in + pulses only
+ * after a 100ms delay so quick navigations don't flash it.
+ */
+.link-hint {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-inline-start: 0.4em;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0;
+  visibility: hidden;
+  vertical-align: middle;
+}
+
+.link-hint.is-pending {
+  visibility: visible;
+  animation:
+    link-hint-fade 200ms ease forwards,
+    link-hint-pulse 1s ease-in-out infinite;
+  animation-delay: 100ms;
+}
+
+@keyframes link-hint-fade {
+  to {
+    opacity: 0.6;
+  }
+}
+
+@keyframes link-hint-pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
