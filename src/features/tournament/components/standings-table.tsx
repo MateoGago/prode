@@ -91,7 +91,7 @@ function GroupTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-[13px]">
+        <table className="w-full min-w-[520px] text-[13px]">
           <thead>
             <tr className="border-b border-border">
               <th className="w-8 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -145,7 +145,9 @@ function GroupTable({
                         flagUrl={row.team.flagUrl}
                         size={18}
                       />
-                      <span className="font-medium">{row.team.name}</span>
+                      <span className="font-medium whitespace-nowrap">
+                        {row.team.name}
+                      </span>
                       {qualification === "top2" && (
                         <span className="ml-1 rounded-sm bg-emerald-500/15 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
                           C

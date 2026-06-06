@@ -11,7 +11,7 @@
     "format": "biome format --write",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed": "bun run scripts/seed-fixtures.ts",
+    "seed": "bun --env-file=.env.prod scripts/seed-fixtures.ts",
     "sync": "bun run scripts/sync-results.ts",
     "prepare": "husky"
   },
