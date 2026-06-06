@@ -30,7 +30,7 @@ export function AppTabBar({ isAdmin, tablaHref }: AppNavProps) {
       data-app-tab-bar
       aria-label="Navegación principal"
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/80 backdrop-blur-xl backdrop-saturate-150 md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
     >
       {items.map(({ href, label, icon: Icon, matchGroupRoutes }) => {
         const active = isNavItemActive(pathname, href, matchGroupRoutes);
