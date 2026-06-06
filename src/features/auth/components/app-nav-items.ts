@@ -1,4 +1,11 @@
-import { Home, ListOrdered, Shield, Swords, Trophy } from "lucide-react";
+import {
+  Home,
+  ListOrdered,
+  Settings,
+  Shield,
+  Swords,
+  Trophy,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type NavItem = {
@@ -30,6 +37,7 @@ export function buildNavItems(tablaHref: string): readonly NavItem[] {
       matchGroupRoutes: true,
     },
     { href: "/admin", label: "Admin", icon: Shield, adminOnly: true },
+    { href: "/settings", label: "Ajustes", icon: Settings },
   ];
 }
 
