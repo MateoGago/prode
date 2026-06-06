@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/features/auth/actions/get-current-user";
+import { getMyProfile } from "@/features/auth/actions/get-my-profile";
 import { getDashboard } from "@/features/dashboard";
 import {
   InicioContent,
@@ -17,19 +18,20 @@ export default async function HomePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // The group list and the dashboard are independent reads — fetch in parallel.
-  // The empty-groups gate (REQ-07, decision B) still wins: a wasted dashboard
-  // fetch on the rare no-groups path is cheaper than serializing both reads.
-  const [groups, dashboard] = await Promise.all([
+  // Profile (name), group list and dashboard are independent reads — fetch in
+  // parallel. The empty-groups gate (REQ-07, decision B) still wins: a wasted
+  // dashboard/profile fetch on the rare no-groups path is cheaper than
+  // serializing the reads.
+  const [profile, groups, dashboard] = await Promise.all([
+    getMyProfile(),
     listMyGroups(),
     getDashboard(user.id),
   ]);
   if (groups.length === 0) redirect("/onboarding");
 
-  const displayName =
-    (user.user_metadata?.display_name as string | undefined) ??
-    user.email?.split("@")[0] ??
-    "crack";
+  // Single source of truth: profiles.display_name (same column the leaderboard
+  // renders), so Inicio and the table never disagree.
+  const displayName = profile?.displayName ?? "crack";
 
   const subline =
     dashboard.pendingPredictions > 0

@@ -23,14 +23,21 @@ describe("buildNavItems", () => {
   it("non-admin items excludes the Admin item", () => {
     const items = buildNavItems(TABLA_HREF);
     const nonAdminItems = items.filter((i) => !i.adminOnly);
-    // Inicio, Partidos, Fixture, Tabla = 4 non-admin items
-    expect(nonAdminItems).toHaveLength(4);
+    // Inicio, Partidos, Fixture, Tabla, Ajustes = 5 non-admin items
+    expect(nonAdminItems).toHaveLength(5);
   });
 
-  it("admin sees 5 items total (including adminOnly)", () => {
+  it("admin sees 6 items total (including adminOnly)", () => {
     const items = buildNavItems(TABLA_HREF);
-    // All items including Admin
-    expect(items).toHaveLength(5);
+    // Inicio, Partidos, Fixture, Tabla, Admin, Ajustes
+    expect(items).toHaveLength(6);
+  });
+
+  it("includes an Ajustes item linking to /settings, not admin-gated", () => {
+    const items = buildNavItems(TABLA_HREF);
+    const settingsItem = items.find((i) => i.href === "/settings");
+    expect(settingsItem?.label).toBe("Ajustes");
+    expect(settingsItem?.adminOnly).toBeFalsy();
   });
 
   it("Fixture item has no adminOnly flag", () => {
