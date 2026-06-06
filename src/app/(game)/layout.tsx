@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { getCurrentUser } from "@/features/auth/actions/get-current-user";
+import { getMyProfile } from "@/features/auth/actions/get-my-profile";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { AppSidebarNav, AppTabBar } from "@/features/auth/components/app-nav";
 import { createClient } from "@/shared/supabase/server";
@@ -36,17 +37,14 @@ export default async function GameLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // profile (role + name) and the first-group lookup only need user.id and are
-  // independent of each other — run them together, not as a waterfall. The
-  // "Tabla" nav links straight to the user's first group leaderboard (RLS scopes
-  // the query); it falls back to /onboarding when the user has no groups.
+  // profile (role + name) and the first-group lookup are independent — run them
+  // together, not as a waterfall. getMyProfile is the single source of truth for
+  // the displayed name (profiles.display_name), shared with Inicio via React.cache.
+  // The "Tabla" nav links straight to the user's first group leaderboard (RLS
+  // scopes the query); it falls back to /onboarding when the user has no groups.
   const supabase = await createClient();
-  const [profileRes, firstGroupRes] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("role, display_name")
-      .eq("id", user.id)
-      .maybeSingle(),
+  const [profile, firstGroupRes] = await Promise.all([
+    getMyProfile(),
     supabase
       .from("groups")
       .select("invite_code")
@@ -55,13 +53,8 @@ export default async function GameLayout({
       .maybeSingle(),
   ]);
 
-  const profile = profileRes.data;
   const isAdmin = profile?.role === "admin";
-
-  const displayName =
-    (profile?.display_name as string | undefined) ??
-    (user.user_metadata?.display_name as string | undefined) ??
-    "Jugador";
+  const displayName = profile?.displayName ?? "Jugador";
 
   const firstGroup = firstGroupRes.data;
   const tablaHref = firstGroup?.invite_code
