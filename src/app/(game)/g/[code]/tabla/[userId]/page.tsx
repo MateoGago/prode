@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { resolveActiveGroup } from "@/features/groups/actions/resolve-active-group";
 import { getMatchBreakdown } from "@/features/leaderboard/actions/get-match-breakdown";
 import { MatchBreakdownList } from "@/features/leaderboard";
@@ -30,37 +31,38 @@ export default async function GroupUserBreakdownPage({
 
   const supabase = await createClient();
 
-  // Co-member check: target userId must also be in this group (REQ-05).
-  const { data: isTargetMember, error: memberErr } = await supabase.rpc(
-    "is_group_member",
-    { p_group_id: groupId, p_user_id: userId },
-  );
+  // The co-member check, the target's profile and the (cache()'d) current user
+  // are independent reads — run them at once instead of as a 3-round-trip
+  // waterfall. Only getMatchBreakdown is sequenced after, behind the gate.
+  const [memberResult, profileResult, currentUser] = await Promise.all([
+    supabase.rpc("is_group_member", {
+      p_group_id: groupId,
+      p_user_id: userId,
+    }),
+    supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", userId)
+      .maybeSingle(),
+    getCurrentUser(),
+  ]);
 
-  if (memberErr) {
-    throw new Error(memberErr.message);
+  if (memberResult.error) {
+    throw new Error(memberResult.error.message);
   }
 
-  if (!isTargetMember) {
+  // Co-member gate (REQ-05): target must also belong to this group.
+  if (!memberResult.data) {
     notFound();
   }
 
-  const { data: profileResult } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!profileResult) {
+  if (!profileResult.data) {
     notFound();
   }
 
-  const displayName = profileResult.display_name;
+  const displayName = profileResult.data.display_name;
   const items = await getMatchBreakdown(userId, groupId);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const subjectIsSelf = user?.id === userId;
+  const subjectIsSelf = currentUser?.id === userId;
 
   return (
     <section className="grid gap-6">

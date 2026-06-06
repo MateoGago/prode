@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/shared/lib/utils";
+import { LinkPendingHint } from "@/shared/ui/nav-progress";
 
 import { buildNavItems, isNavItemActive } from "./app-nav-items";
 
@@ -57,6 +58,7 @@ export function AppTabBar({ isAdmin, tablaHref }: AppNavProps) {
               />
             </span>
             {label}
+            <LinkPendingHint />
           </Link>
         );
       })}
@@ -90,6 +92,7 @@ export function AppSidebarNav({ isAdmin, tablaHref }: AppNavProps) {
           >
             <Icon className="size-5" aria-hidden="true" strokeWidth={2.2} />
             {label}
+            <LinkPendingHint />
           </Link>
         );
       })}

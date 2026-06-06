@@ -1,3 +1,6 @@
+import { cache } from "react";
+
+import { getCachedGroupStageMatchCount } from "@/features/fixtures/actions/get-global-matches";
 import { createClient } from "@/shared/supabase/server";
 
 import type { PredictionProgress } from "../entities/predictions-board";
@@ -17,31 +20,36 @@ import type { PredictionProgress } from "../entities/predictions-board";
  * ids back to JS just to feed an `.in()`. deriveProgress needs full arrays and is
  * overkill for a denominator/numerator pair.
  */
-export async function getPredictionsProgress(
-  userId: string,
-): Promise<PredictionProgress> {
-  const supabase = await createClient();
+export const getPredictionsProgress = cache(
+  async function getPredictionsProgress(
+    userId: string,
+  ): Promise<PredictionProgress> {
+    const supabase = await createClient();
 
-  const { count: total, error: totalError } = await supabase
-    .from("matches")
-    .select("*", { count: "exact", head: true })
-    .eq("round", "group");
-  if (totalError) {
-    throw new Error(`count group matches failed: ${totalError.message}`);
-  }
+    // The denominator (group-stage match count) is GLOBAL — served from the
+    // cross-request cache. The numerator (this user's predictions) is per-user and
+    // stays a live RLS read. Independent, so run them together.
+    // predictions → matches is N:1, so the inner join yields one row per
+    // prediction; counting it gives the user's group-stage predictions directly.
+    const [total, { count: loaded, error: loadedError }] = await Promise.all([
+      getCachedGroupStageMatchCount(),
+      supabase
+        .from("predictions")
+        .select("match_id, matches!inner(round)", {
+          count: "exact",
+          head: true,
+        })
+        .eq("user_id", userId)
+        .eq("matches.round", "group"),
+    ]);
+    if (loadedError) {
+      throw new Error(
+        `count loaded predictions failed: ${loadedError.message}`,
+      );
+    }
 
-  if (!total) return { loaded: 0, total: 0 };
+    if (!total) return { loaded: 0, total: 0 };
 
-  // predictions → matches is N:1, so the inner join yields one row per
-  // prediction; counting it gives the user's group-stage predictions directly.
-  const { count: loaded, error: loadedError } = await supabase
-    .from("predictions")
-    .select("match_id, matches!inner(round)", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("matches.round", "group");
-  if (loadedError) {
-    throw new Error(`count loaded predictions failed: ${loadedError.message}`);
-  }
-
-  return { loaded: loaded ?? 0, total };
-}
+    return { loaded: loaded ?? 0, total };
+  },
+);

@@ -6,7 +6,7 @@
  * matches_admin_write RLS policy is the backstop.
  */
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import type { Round } from "@/features/fixtures/entities/match";
 import { createAdminClient } from "@/shared/supabase/admin";
@@ -68,5 +68,10 @@ export async function confirmResultAction(
   // the admin (and anyone navigating after) sees the recomputed standings. It
   // does NOT push to other users in real time; they refresh as usual.
   revalidatePath("/", "layout");
+  // The cached global matches reader (get-global-matches.ts, tag "matches") now
+  // holds a stale score. expire:0 forces immediate expiration — NOT "max"
+  // (stale-while-revalidate) — so the admin who just confirmed reads the fresh
+  // result on the very next render (read-your-writes), not the old one once.
+  revalidateTag("matches", { expire: 0 });
   return { ok: true, recomputed };
 }
