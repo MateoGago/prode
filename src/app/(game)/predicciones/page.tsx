@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { getCachedMatchesWithTeams } from "@/features/fixtures/actions/get-global-matches";
 import { PredictionsPageClient } from "@/features/predictions/components/predictions-page-client";
 import {
   buildPredictionsByMatchId,
@@ -7,7 +8,6 @@ import {
   groupMatchesByDay,
   groupMatchesByRound,
   mapMatchRow,
-  type MatchWithTeamsRow,
   type PredictionReadRow,
 } from "@/features/predictions/entities/predictions-page";
 import { getCurrentUser } from "@/features/auth/actions/get-current-user";
@@ -19,48 +19,25 @@ export default async function PrediccionesPage() {
 
   const supabase = await createClient();
 
-  const { data: matchesData, error: matchesError } = await supabase
-    .from("matches")
-    .select(
-      `
-      id,
-      external_ref,
-      round,
-      multiplier,
-      matchday,
-      home_placeholder,
-      away_placeholder,
-      kickoff_at,
-      status,
-      home_score,
-      away_score,
-      result_confirmed_at,
-      home_team:teams!matches_home_team_id_fkey (
-        id, external_ref, name, group_label, flag_url
-      ),
-      away_team:teams!matches_away_team_id_fkey (
-        id, external_ref, name, group_label, flag_url
-      )
-    `,
-    )
-    .order("kickoff_at", { ascending: true });
+  // Matches are GLOBAL (cross-request cached); predictions are per-user (RLS,
+  // never cached). Independent reads — run them together.
+  const [matchesData, predictionsResult] = await Promise.all([
+    getCachedMatchesWithTeams(),
+    supabase
+      .from("predictions")
+      .select("match_id, home_score, away_score, advancer_team_id")
+      .eq("user_id", user.id),
+  ]);
 
-  if (matchesError) {
-    throw new Error(`load matches failed: ${matchesError.message}`);
+  if (predictionsResult.error) {
+    throw new Error(
+      `load predictions failed: ${predictionsResult.error.message}`,
+    );
   }
 
-  const { data: predictionsData, error: predictionsError } = await supabase
-    .from("predictions")
-    .select("match_id, home_score, away_score, advancer_team_id")
-    .eq("user_id", user.id);
-
-  if (predictionsError) {
-    throw new Error(`load predictions failed: ${predictionsError.message}`);
-  }
-
-  const matches = ((matchesData ?? []) as MatchWithTeamsRow[]).map(mapMatchRow);
+  const matches = matchesData.map(mapMatchRow);
   const initialPredictionsByMatchId = buildPredictionsByMatchId(
-    (predictionsData ?? []) as PredictionReadRow[],
+    (predictionsResult.data ?? []) as PredictionReadRow[],
   );
 
   // The "Etapa" view + group progress stay group-only (groupMatches filters by

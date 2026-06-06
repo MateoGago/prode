@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { GroupSummary } from "@/features/groups/actions/list-my-groups";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { LinkPendingHint } from "@/shared/ui/nav-progress";
 
 interface GroupSwitcherProps {
   groups: GroupSummary[];
@@ -44,6 +45,7 @@ export function GroupSwitcher({ groups, activeCode }: GroupSwitcherProps) {
             )}
           >
             {group.name}
+            <LinkPendingHint />
           </Link>
         );
       })}

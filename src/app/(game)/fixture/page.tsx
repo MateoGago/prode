@@ -12,64 +12,31 @@
  */
 
 import {
-  mapMatchRow,
-  type MatchWithTeamsRow,
-} from "@/features/predictions/entities/predictions-page";
+  getCachedMatchesWithTeams,
+  getCachedTeams,
+} from "@/features/fixtures/actions/get-global-matches";
+import { mapMatchRow } from "@/features/predictions/entities/predictions-page";
 import {
   computeStandings,
   selectBestThirds,
 } from "@/features/tournament/entities/standings";
 import { buildBracket } from "@/features/tournament/entities/bracket";
 import { FixtureClient } from "@/features/tournament/components/fixture-client";
-import { createClient } from "@/shared/supabase/server";
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default async function FixturePage() {
-  const supabase = await createClient();
+  // Both reads are GLOBAL tournament data, served from the cross-request cache
+  // (invalidated on admin confirm / slot resolve). Fetch them together.
+  const [matchesData, teamsData] = await Promise.all([
+    getCachedMatchesWithTeams(),
+    getCachedTeams(),
+  ]);
 
-  const { data: matchesData, error: matchesError } = await supabase
-    .from("matches")
-    .select(
-      `
-      id,
-      external_ref,
-      round,
-      multiplier,
-      matchday,
-      home_placeholder,
-      away_placeholder,
-      kickoff_at,
-      status,
-      home_score,
-      away_score,
-      result_confirmed_at,
-      home_team:teams!matches_home_team_id_fkey (
-        id, external_ref, name, group_label, flag_url
-      ),
-      away_team:teams!matches_away_team_id_fkey (
-        id, external_ref, name, group_label, flag_url
-      )
-    `,
-    )
-    .order("kickoff_at", { ascending: true });
-
-  if (matchesError) {
-    throw new Error(`load matches failed: ${matchesError.message}`);
-  }
-
-  const { data: teamsData, error: teamsError } = await supabase
-    .from("teams")
-    .select("id, external_ref, name, group_label, flag_url");
-
-  if (teamsError) {
-    throw new Error(`load teams failed: ${teamsError.message}`);
-  }
-
-  const matches = ((matchesData ?? []) as MatchWithTeamsRow[]).map(mapMatchRow);
-  const teams = (teamsData ?? []).map((t) => ({
+  const matches = matchesData.map(mapMatchRow);
+  const teams = teamsData.map((t) => ({
     id: t.id,
     externalRef: t.external_ref,
     name: t.name,
