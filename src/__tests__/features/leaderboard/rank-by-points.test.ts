@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { rankByPoints } from "@/features/leaderboard/entities/leaderboard";
 
-// The single source of truth for ranking: total points DESC, standard
-// competition ranking (shared rank on ties, next rank skips). Previously this
-// logic was copy-pasted in derivePlayerStats, getRankedRows and listMyGroups.
+// The single source of truth for ranking: total points DESC, SEQUENTIAL
+// positions (never shared on ties; ties broken alphabetically by player name).
+// Consumed by derivePlayerStats, the leaderboard table and listMyGroups.
 
 describe("rankByPoints", () => {
   it("sorts by totalPoints DESC and assigns rank 1..n", () => {
     const ranked = rankByPoints([
-      { id: "a", totalPoints: 10 },
-      { id: "b", totalPoints: 30 },
-      { id: "c", totalPoints: 20 },
+      { id: "a", playerName: "Ana", totalPoints: 10 },
+      { id: "b", playerName: "Bob", totalPoints: 30 },
+      { id: "c", playerName: "Caro", totalPoints: 20 },
     ]);
 
     expect(ranked.map((r) => [r.id, r.rank])).toEqual([
@@ -21,24 +21,29 @@ describe("rankByPoints", () => {
     ]);
   });
 
-  it("shares rank on ties and skips the next rank (1,1,3)", () => {
+  it("numbers ties sequentially — never shared (1,2,3 not 1,1,3)", () => {
     const ranked = rankByPoints([
-      { id: "x", totalPoints: 50 },
-      { id: "y", totalPoints: 50 },
-      { id: "z", totalPoints: 10 },
+      { id: "x", playerName: "Xavi", totalPoints: 50 },
+      { id: "y", playerName: "Yago", totalPoints: 50 },
+      { id: "z", playerName: "Zoe", totalPoints: 10 },
     ]);
 
-    expect(ranked.map((r) => r.rank)).toEqual([1, 1, 3]);
+    expect(ranked.map((r) => r.rank)).toEqual([1, 2, 3]);
   });
 
-  it("ranks a single tie below the leader as (1,2,2)", () => {
+  it("breaks point ties alphabetically by player name (es locale)", () => {
     const ranked = rankByPoints([
-      { id: "leader", totalPoints: 40 },
-      { id: "tieA", totalPoints: 34 },
-      { id: "tieB", totalPoints: 34 },
+      { id: "leader", playerName: "Zeta", totalPoints: 40 },
+      { id: "tieB", playerName: "Bruno", totalPoints: 34 },
+      { id: "tieA", playerName: "Ana", totalPoints: 34 },
     ]);
 
-    expect(ranked.map((r) => r.rank)).toEqual([1, 2, 2]);
+    // Zeta leads on points; the 34-pt tie orders Ana before Bruno.
+    expect(ranked.map((r) => [r.playerName, r.rank])).toEqual([
+      ["Zeta", 1],
+      ["Ana", 2],
+      ["Bruno", 3],
+    ]);
   });
 
   it("preserves every other field on the row", () => {
@@ -61,8 +66,8 @@ describe("rankByPoints", () => {
 
   it("does not mutate the input array", () => {
     const input = [
-      { id: "a", totalPoints: 1 },
-      { id: "b", totalPoints: 2 },
+      { id: "a", playerName: "Ana", totalPoints: 1 },
+      { id: "b", playerName: "Bob", totalPoints: 2 },
     ];
     rankByPoints(input);
     expect(input.map((r) => r.id)).toEqual(["a", "b"]);

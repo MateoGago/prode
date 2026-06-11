@@ -6,7 +6,8 @@
  *
  * Two round-trips total, regardless of group count: one for the memberships
  * (group metadata) and one get_group_leaderboards RPC for every group's
- * standings at once. Ranking (shared rank on ties) is the shared rankByPoints.
+ * standings at once. Ranking (sequential, ties broken by name) is the shared
+ * rankByPoints.
  */
 
 import { getCurrentUser } from "@/features/auth/actions/get-current-user";

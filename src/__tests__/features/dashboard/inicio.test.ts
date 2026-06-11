@@ -153,14 +153,14 @@ describe("derivePlayerStats", () => {
     { playerId: "u3", playerName: "Caro", totalPoints: 34 },
   ];
 
-  it("returns the player's points and dense rank position", () => {
-    // sorted: Beto 40 (#1), Ana 34 (#2), Caro 34 (#2 tie)
+  it("returns the player's points and sequential position", () => {
+    // sorted: Beto 40 (#1), then the 34-pt tie by name: Ana (#2), Caro (#3)
     expect(derivePlayerStats(rows, "u1")).toEqual({ position: 2, points: 34 });
     expect(derivePlayerStats(rows, "u2")).toEqual({ position: 1, points: 40 });
   });
 
-  it("shares rank on ties (Ana and Caro both #2)", () => {
-    expect(derivePlayerStats(rows, "u3").position).toBe(2);
+  it("numbers a point tie sequentially by name (Ana #2, Caro #3)", () => {
+    expect(derivePlayerStats(rows, "u3").position).toBe(3);
   });
 
   it("returns null position and 0 points for a player not on the board yet", () => {

@@ -92,9 +92,8 @@ describe("LeaderboardTable", () => {
     ).toBeInTheDocument();
   });
 
-  it("with row.href, player name (rank 4+) is a link with correct href", () => {
-    // With podium showing top-3, rank 4+ appear in the table list with links
-    const fourRows: LeaderboardRow[] = [
+  it("with row.href, the player name is a link with the correct href", () => {
+    const rowsWithHref: LeaderboardRow[] = [
       ...sampleRows,
       {
         playerId: "u4",
@@ -104,56 +103,39 @@ describe("LeaderboardTable", () => {
       },
     ];
 
-    render(<LeaderboardTable rows={fourRows} />);
+    render(<LeaderboardTable rows={rowsWithHref} />);
 
     const dianaLink = screen.getByRole("link", { name: "Diana" });
     expect(dianaLink).toHaveAttribute("href", "/tabla/u4");
   });
 
-  it("without row.href, rank 4+ player renders as plain text (no links)", () => {
-    const fourRows: LeaderboardRow[] = [
+  it("without row.href, the player renders as plain text (no link)", () => {
+    const rowsNoHref: LeaderboardRow[] = [
       ...sampleRows,
       { playerId: "u4", playerName: "Diana", totalPoints: 5 },
     ];
-    render(<LeaderboardTable rows={fourRows} />);
+    render(<LeaderboardTable rows={rowsNoHref} />);
 
-    // Diana (rank 4, no href) should not be a link
     expect(screen.queryByRole("link", { name: "Diana" })).toBeNull();
     expect(screen.getByText("Diana")).toBeInTheDocument();
   });
 
-  it("highlightPlayerId marks a rank-4+ row with aria-current", () => {
-    // Bob is rank 2 (in podium); Diana is rank 4 (in list below podium)
-    const fourRows: LeaderboardRow[] = [
-      ...sampleRows,
-      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
-    ];
-    render(<LeaderboardTable rows={fourRows} highlightPlayerId="u4" />);
+  it("highlightPlayerId marks the matching row with aria-current", () => {
+    render(<LeaderboardTable rows={sampleRows} highlightPlayerId="u2" />);
 
-    const dianaCell = screen.getByText("Diana");
-    const row = dianaCell.closest("tr");
+    const bobCell = screen.getByText("Bob");
+    const row = bobCell.closest("tr");
     expect(row).toHaveAttribute("aria-current", "true");
-
-    // Charlie is rank 3 — lives in the podium (not a <tr>), so no aria-current row
-    const charlieCell = screen.getByText("Charlie");
-    expect(charlieCell.closest("tr")).toBeNull();
   });
 
-  it("highlighted row (rank 4+) has ring-primary class (own-row highlight)", () => {
-    // Alice is rank 1 (in podium), Diana is rank 4 (in the list table)
-    const moreRows: LeaderboardRow[] = [
-      ...sampleRows,
-      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
-    ];
-    render(<LeaderboardTable rows={moreRows} highlightPlayerId="u4" />);
+  it("the highlighted row carries the ring-primary own-row highlight", () => {
+    render(<LeaderboardTable rows={sampleRows} highlightPlayerId="u2" />);
 
-    const dianaCell = screen.getByText("Diana");
-    const row = dianaCell.closest("tr");
-    // The redesigned row uses ring-2 ring-primary for own-row highlight
-    expect(row?.className).toMatch(/ring-primary/);
+    const bobCell = screen.getByText("Bob");
+    expect(bobCell.closest("tr")?.className).toMatch(/ring-primary/);
   });
 
-  it("shared rank on ties: two players with same points share the same Puesto (LB-1)", () => {
+  it("numbers tied players sequentially (1,2,3 — never shared)", () => {
     const tiedRows: LeaderboardRow[] = [
       { playerId: "p1", playerName: "Player 1", totalPoints: 50 },
       { playerId: "p2", playerName: "Player 2", totalPoints: 50 },
@@ -162,187 +144,59 @@ describe("LeaderboardTable", () => {
 
     render(<LeaderboardTable rows={tiedRows} />);
 
-    // Both first-place rows should show rank 1
-    const rankCells = screen.getAllByText("1");
-    expect(rankCells).toHaveLength(2);
-
-    // The last player should be rank 3 (not 2) due to shared rank
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByTestId("position-badge-p1")).toHaveTextContent("1");
+    expect(screen.getByTestId("position-badge-p2")).toHaveTextContent("2");
+    expect(screen.getByTestId("position-badge-p3")).toHaveTextContent("3");
   });
 
-  // ── D-7: Cancha Pop podium + reveal ─────────────────────────────────────────
+  it("breaks point ties alphabetically by name", () => {
+    // Equal points: Zoe before Ana would be wrong — name order puts Ana first.
+    const tied: LeaderboardRow[] = [
+      { playerId: "z", playerName: "Zoe", totalPoints: 10 },
+      { playerId: "a", playerName: "Ana", totalPoints: 10 },
+    ];
+    render(<LeaderboardTable rows={tied} />);
 
-  it("renders a podium section for top-3 rows", () => {
-    render(<LeaderboardTable rows={sampleRows} />);
-
-    // Podium region is labelled
-    expect(screen.getByRole("region", { name: /podio/i })).toBeInTheDocument();
+    expect(screen.getByTestId("position-badge-a")).toHaveTextContent("1");
+    expect(screen.getByTestId("position-badge-z")).toHaveTextContent("2");
   });
 
-  it("podium shows names for rank 1, 2, and 3", () => {
-    render(<LeaderboardTable rows={sampleRows} />);
-
-    const podium = screen.getByRole("region", { name: /podio/i });
-    expect(podium).toHaveTextContent("Alice");
-    expect(podium).toHaveTextContent("Bob");
-    expect(podium).toHaveTextContent("Charlie");
-  });
-
-  it("podium uses crown emoji for rank-1 player", () => {
-    render(<LeaderboardTable rows={sampleRows} />);
-
-    const podium = screen.getByRole("region", { name: /podio/i });
-    expect(podium).toHaveTextContent("👑");
-  });
-
-  it("table rows below the podium still show position badges", () => {
-    // With more than 3 players, ranks 4+ appear in the table list
+  it("every row shows a position badge", () => {
     const moreRows: LeaderboardRow[] = [
       ...sampleRows,
       { playerId: "u4", playerName: "Diana", totalPoints: 5 },
     ];
     render(<LeaderboardTable rows={moreRows} />);
 
-    // Diana is rank 4, should appear in the list (not podium)
-    const dianaCell = screen.getByText("Diana");
-    expect(dianaCell).toBeInTheDocument();
-
-    // Position badge "4" should exist somewhere
+    expect(screen.getByTestId("position-badge-u1")).toHaveTextContent("1");
     expect(screen.getByTestId("position-badge-u4")).toHaveTextContent("4");
-  });
-
-  it("podium is not rendered when fewer than 3 rows", () => {
-    const twoRows: LeaderboardRow[] = [
-      { playerId: "u1", playerName: "Alice", totalPoints: 30 },
-      { playerId: "u2", playerName: "Bob", totalPoints: 20 },
-    ];
-    render(<LeaderboardTable rows={twoRows} />);
-
-    // No podium region — falls back to full table view
-    expect(
-      screen.queryByRole("region", { name: /podio/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("own-row in list below podium gets aria-current and ring highlight", () => {
-    const moreRows: LeaderboardRow[] = [
-      ...sampleRows,
-      { playerId: "u4", playerName: "Diana", totalPoints: 5 },
-    ];
-    render(<LeaderboardTable rows={moreRows} highlightPlayerId="u4" />);
-
-    const dianaCell = screen.getByText("Diana");
-    const row = dianaCell.closest("tr");
-    expect(row).toHaveAttribute("aria-current", "true");
-    expect(row?.className).toMatch(/ring-primary/);
   });
 
   it("renders EmptyState with no-posiciones text when rows is empty", () => {
     render(<LeaderboardTable rows={[]} />);
 
-    // EmptyState renders a <p> with the title
     expect(
       screen.getByText("No hay posiciones para mostrar."),
     ).toBeInTheDocument();
   });
 
-  // ── PRO-53: flat leaderboard until points differ ─────────────────────────
-
-  it("no podium when all players are tied at 0 pts (season start)", () => {
+  it("renders all players in a flat list even when everyone is tied at 0", () => {
     const allZero: LeaderboardRow[] = [
       { playerId: "a1", playerName: "Ana", totalPoints: 0 },
       { playerId: "a2", playerName: "Bruno", totalPoints: 0 },
       { playerId: "a3", playerName: "Carla", totalPoints: 0 },
-      { playerId: "a4", playerName: "Diego", totalPoints: 0 },
     ];
     render(<LeaderboardTable rows={allZero} />);
 
-    // No podium section
-    expect(
-      screen.queryByRole("region", { name: /podio/i }),
-    ).not.toBeInTheDocument();
-
-    // No crown
-    expect(screen.queryByText("👑")).not.toBeInTheDocument();
-
-    // All four players appear in the flat list
     expect(screen.getByText("Ana")).toBeInTheDocument();
     expect(screen.getByText("Bruno")).toBeInTheDocument();
     expect(screen.getByText("Carla")).toBeInTheDocument();
-    expect(screen.getByText("Diego")).toBeInTheDocument();
-  });
-
-  it("no podium when 3+ players are all tied at the same non-zero score", () => {
-    const allTied: LeaderboardRow[] = [
-      { playerId: "t1", playerName: "Player 1", totalPoints: 15 },
-      { playerId: "t2", playerName: "Player 2", totalPoints: 15 },
-      { playerId: "t3", playerName: "Player 3", totalPoints: 15 },
-    ];
-    render(<LeaderboardTable rows={allTied} />);
-
-    expect(
-      screen.queryByRole("region", { name: /podio/i }),
-    ).not.toBeInTheDocument();
-
-    // All players render in the flat table (rank badges present)
-    expect(screen.getByTestId("position-badge-t1")).toBeInTheDocument();
-    expect(screen.getByTestId("position-badge-t2")).toBeInTheDocument();
-    expect(screen.getByTestId("position-badge-t3")).toBeInTheDocument();
-  });
-
-  it("podium player with href renders as a link inside the podium region", () => {
-    const rowsWithHref: LeaderboardRow[] = [
-      {
-        playerId: "u1",
-        playerName: "Alice",
-        totalPoints: 30,
-        href: "/tabla/u1",
-      },
-      { playerId: "u2", playerName: "Bob", totalPoints: 20, href: "/tabla/u2" },
-      { playerId: "u3", playerName: "Charlie", totalPoints: 10 },
-    ];
-    render(<LeaderboardTable rows={rowsWithHref} />);
-
-    const podium = screen.getByRole("region", { name: /podio/i });
-
-    // Alice (rank 1) and Bob (rank 2) have hrefs — should be links
-    const aliceLink = screen.getAllByRole("link", { name: "Alice" })[0];
-    expect(podium).toContainElement(aliceLink);
-    expect(aliceLink).toHaveAttribute("href", "/tabla/u1");
-
-    const bobLink = screen.getAllByRole("link", { name: "Bob" })[0];
-    expect(podium).toContainElement(bobLink);
-    expect(bobLink).toHaveAttribute("href", "/tabla/u2");
-
-    // Charlie has no href — should NOT be a link inside the podium
-    expect(podium).toHaveTextContent("Charlie");
-    expect(screen.queryByRole("link", { name: "Charlie" })).toBeNull();
-  });
-
-  it("podium renders when points differ (top player has more than the rest)", () => {
-    const withSpread: LeaderboardRow[] = [
-      { playerId: "s1", playerName: "Leader", totalPoints: 50 },
-      { playerId: "s2", playerName: "Second", totalPoints: 30 },
-      { playerId: "s3", playerName: "Third", totalPoints: 10 },
-      { playerId: "s4", playerName: "Fourth", totalPoints: 5 },
-    ];
-    render(<LeaderboardTable rows={withSpread} />);
-
-    // Podium present with top-3
-    const podium = screen.getByRole("region", { name: /podio/i });
-    expect(podium).toHaveTextContent("Leader");
-    expect(podium).toHaveTextContent("Second");
-    expect(podium).toHaveTextContent("Third");
-
-    // Rank 4 in flat list
-    expect(screen.getByTestId("position-badge-s4")).toHaveTextContent("4");
   });
 });
 
-// ── Manage mode: owner-only remove controls (podium + list) ──────────────────
+// ── Manage mode: owner-only remove controls ──────────────────────────────────
 
 describe("LeaderboardTable — manage mode", () => {
-  // 4 rows with a points spread: ranks 1-3 land in the podium, rank 4 in the list.
   const rows: LeaderboardRow[] = [
     { playerId: "owner", playerName: "Alice", totalPoints: 30 },
     { playerId: "u2", playerName: "Bob", totalPoints: 20 },
@@ -350,7 +204,7 @@ describe("LeaderboardTable — manage mode", () => {
     { playerId: "u4", playerName: "Diana", totalPoints: 5 },
   ];
 
-  it("owner in manage mode sees a remove control for a list member, and clicking it fires onRemoveMember", () => {
+  it("owner in manage mode sees a remove control for a member, and clicking it fires onRemoveMember", () => {
     const onRemoveMember = vi.fn();
     render(
       <LeaderboardTable
@@ -382,7 +236,7 @@ describe("LeaderboardTable — manage mode", () => {
     expect(screen.queryByRole("button", { name: /echar a alice/i })).toBeNull();
   });
 
-  it("shows remove controls for podium members (not just the list)", () => {
+  it("shows remove controls for every non-owner member", () => {
     render(
       <LeaderboardTable
         rows={rows}
@@ -393,12 +247,14 @@ describe("LeaderboardTable — manage mode", () => {
       />,
     );
 
-    // Bob (rank 2) and Charlie (rank 3) live in the podium, not the list.
     expect(
       screen.getByRole("button", { name: /echar a bob/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /echar a charlie/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /echar a diana/i }),
     ).toBeInTheDocument();
   });
 

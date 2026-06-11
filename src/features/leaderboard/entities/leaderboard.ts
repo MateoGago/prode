@@ -3,27 +3,26 @@ import type { LeaderboardRow } from "../components/leaderboard-table";
 export type Ranked<T> = T & { rank: number };
 
 /**
- * The single source of truth for leaderboard ranking: total points DESC with
- * standard competition ranking (tied rows share a rank, the next rank skips —
- * e.g. 50,50,10 → 1,1,3). Returns a new array; the input is not mutated.
+ * The single source of truth for leaderboard ranking: SEQUENTIAL positions
+ * 1..n, never shared on ties. Rows are ordered by total points DESC and, when
+ * points are equal, alphabetically by player name (es locale). So three players
+ * on 1 pt read 1,2,3 — not 1,1,1 or 1,1,3 — and the next group continues 4,5,…
+ * Returns a new array; the input is not mutated.
  *
  * Consumed by the leaderboard table, the dashboard player stats, and the group
- * switcher summary so the rule lives in exactly one place.
+ * switcher summary so the rule lives in exactly one place — table position and
+ * "tu puesto" can never disagree.
  */
-export function rankByPoints<T extends { totalPoints: number }>(
-  rows: T[],
-): Ranked<T>[] {
-  const sorted = [...rows].sort((a, b) => b.totalPoints - a.totalPoints);
+export function rankByPoints<
+  T extends { totalPoints: number; playerName: string },
+>(rows: T[]): Ranked<T>[] {
+  const sorted = [...rows].sort(
+    (a, b) =>
+      b.totalPoints - a.totalPoints ||
+      a.playerName.localeCompare(b.playerName, "es"),
+  );
 
-  let lastPoints: number | null = null;
-  let lastRank = 0;
-
-  return sorted.map((row, index) => {
-    const rank = lastPoints === row.totalPoints ? lastRank : index + 1;
-    lastPoints = row.totalPoints;
-    lastRank = rank;
-    return { ...row, rank };
-  });
+  return sorted.map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
 export type GetLeaderboardRpcRow = {
