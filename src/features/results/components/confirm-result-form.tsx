@@ -15,7 +15,8 @@ import type React from "react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import type { Round } from "@/features/fixtures/entities/match";
+import type { MatchStatus, Round } from "@/features/fixtures/entities/match";
+import { formatKickoffLong } from "@/shared/datetime";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Stepper } from "@/shared/ui/stepper";
@@ -42,9 +43,19 @@ export interface ConfirmResultFormProps {
   defaultHomeScore?: number;
   defaultAwayScore?: number;
   defaultAdvancerTeamId?: string | null;
+  /** UTC kickoff instant (ISO) — shown in the header to identify the match. */
+  kickoffAt?: string;
+  /** Lifecycle status — surfaced as a small badge so the admin sees what's already confirmed. */
+  status?: MatchStatus;
   onSubmit: (input: ResultInput) => Promise<ConfirmActionResult>;
   onSuccess?: (recomputed: number) => void;
 }
+
+/** Castellano label per status — only the two that matter to the admin glance. */
+const STATUS_LABEL: Partial<Record<MatchStatus, string>> = {
+  confirmed: "Confirmado",
+  finished: "Final sin confirmar",
+};
 
 /** Humanized server-side errors (castellano). The client schema never raises these. */
 const SERVER_ERROR_MESSAGES: Record<ServerErrorReason, string> = {
@@ -65,6 +76,8 @@ export function ConfirmResultForm({
   defaultHomeScore = 0,
   defaultAwayScore = 0,
   defaultAdvancerTeamId,
+  kickoffAt,
+  status,
   onSubmit,
   onSuccess,
 }: ConfirmResultFormProps) {
@@ -115,12 +128,32 @@ export function ConfirmResultForm({
     });
   }
 
+  const statusLabel = status ? STATUS_LABEL[status] : undefined;
+
   return (
     <Card className="shadow-card">
       <CardHeader className="border-b">
         <CardTitle className="text-base font-semibold">
-          Confirmar resultado
+          {hasBothTeams ? (
+            <>
+              <span>{homeTeam.name}</span>{" "}
+              <span className="text-muted-foreground">vs</span>{" "}
+              <span>{awayTeam.name}</span>
+            </>
+          ) : (
+            "Confirmar resultado"
+          )}
         </CardTitle>
+        {kickoffAt || statusLabel ? (
+          <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {kickoffAt ? <span>{formatKickoffLong(kickoffAt)}</span> : null}
+            {statusLabel ? (
+              <span className="rounded-full bg-card-muted px-2 py-0.5 font-medium">
+                {statusLabel}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-6 pt-4" noValidate>

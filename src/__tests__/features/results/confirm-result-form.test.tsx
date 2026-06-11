@@ -453,4 +453,85 @@ describe("ConfirmResultForm", () => {
     expect(screen.getAllByText("3").length).toBeGreaterThan(0);
     expect(screen.getAllByText("1").length).toBeGreaterThan(0);
   });
+
+  // Header identity (PRO-28 fallback): with the panel now listing every match
+  // of the day — not just finished/confirmed ones — each card MUST name the
+  // fixture, or a list of identical "Confirmar resultado" cards is unusable.
+  it("names the fixture in the header for a group match", () => {
+    render(
+      <ConfirmResultForm
+        matchId="m1"
+        round="group"
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    // A group round renders no advancer radios, so these names only come from
+    // the identifying header.
+    expect(screen.getByText("Argentina")).toBeInTheDocument();
+    expect(screen.getByText("Francia")).toBeInTheDocument();
+  });
+
+  it("shows a 'Confirmado' badge when the status is confirmed", () => {
+    render(
+      <ConfirmResultForm
+        matchId="m1"
+        round="group"
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        status="confirmed"
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    expect(screen.getByText(/confirmado/i)).toBeInTheDocument();
+  });
+
+  it("shows a 'Final sin confirmar' badge when the status is finished", () => {
+    render(
+      <ConfirmResultForm
+        matchId="m1"
+        round="group"
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        status="finished"
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    expect(screen.getByText(/final sin confirmar/i)).toBeInTheDocument();
+  });
+
+  it("does not badge a still-scheduled match", () => {
+    render(
+      <ConfirmResultForm
+        matchId="m1"
+        round="group"
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        status="scheduled"
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    expect(screen.queryByText(/confirmado|final sin confirmar/i)).toBeNull();
+  });
+
+  it("renders the AR-local kickoff in the header when given one", () => {
+    render(
+      <ConfirmResultForm
+        matchId="m1"
+        round="group"
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        kickoffAt="2026-06-11T19:00:00Z"
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    // formatKickoffLong renders unpadded AR-local day/month ("11/6").
+    expect(screen.getByText(/11\/6/)).toBeInTheDocument();
+  });
 });

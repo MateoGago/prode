@@ -49,13 +49,17 @@ export default async function AdminPage() {
           Panel de resultados
         </h1>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Cargá o corregí el resultado final de un partido. Al confirmar se
-          recalculan los puntos de todas las predicciones de ese partido.
+          Partidos de hoy. Cargá o corregí el resultado final a mano —al
+          confirmar se recalculan los puntos de todas las predicciones de ese
+          partido— sin depender de la sincronización automática.
         </p>
       </header>
 
       {matches.length === 0 ? (
-        <EmptyState title="No hay partidos para corregir todavía." />
+        <EmptyState
+          title="No hay partidos hoy."
+          description="Cuando haya partidos programados para el día de hoy, vas a poder cargar su resultado acá."
+        />
       ) : (
         <div className="grid gap-4">
           {matches.map((match) => (
@@ -67,6 +71,8 @@ export default async function AdminPage() {
               awayTeam={match.awayTeam}
               defaultHomeScore={match.homeScore ?? undefined}
               defaultAwayScore={match.awayScore ?? undefined}
+              kickoffAt={match.kickoffAt}
+              status={match.status}
               onSubmit={confirmResultAction}
             />
           ))}

@@ -5,7 +5,7 @@
  * from there (or re-exported through the barrel) breaks the build.
  */
 
-import type { Round } from "@/features/fixtures/entities/match";
+import type { MatchStatus, Round } from "@/features/fixtures/entities/match";
 
 /** A competing team rendered in the override form's advancer selector. */
 export interface CorrectableMatchTeam {
@@ -13,7 +13,12 @@ export interface CorrectableMatchTeam {
   name: string;
 }
 
-/** A finished/confirmed match with the data the override form needs. */
+/**
+ * A match the admin can load or correct from the panel. No longer limited to
+ * finished/confirmed: the panel is the manual fallback when the openfootball
+ * sync hasn't run, so a still-`scheduled` group match must show up too. The
+ * admin is the authority, not the cron.
+ */
 export interface CorrectableMatch {
   matchId: string;
   round: Round;
@@ -21,4 +26,8 @@ export interface CorrectableMatch {
   awayTeam: CorrectableMatchTeam | null;
   homeScore: number | null;
   awayScore: number | null;
+  /** UTC kickoff instant (ISO) — identifies the match and orders the list. */
+  kickoffAt: string;
+  /** Lifecycle status, so the card can flag what's already confirmed. */
+  status: MatchStatus;
 }
