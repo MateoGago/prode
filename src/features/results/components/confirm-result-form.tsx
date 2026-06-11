@@ -157,27 +157,39 @@ export function ConfirmResultForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-6 pt-4" noValidate>
-          {/* Score steppers row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Local
+          {/* Score: centered "home – away" marker. Country names label each
+              side (clearer than LOCAL/VISITANTE); compact size + small gaps so
+              both steppers fit a phone width in the PWA. */}
+          <div className="flex items-end justify-center gap-2 sm:gap-4">
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+              <span className="max-w-full truncate text-center text-sm font-semibold">
+                {homeTeam?.name ?? "Local"}
               </span>
               <Stepper
                 value={homeScore}
                 onValueChange={handleHomeChange}
                 label="Local"
+                size="sm"
                 disabled={isPending}
               />
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Visitante
+
+            <span
+              aria-hidden="true"
+              className="pb-2 text-xl font-bold text-muted-foreground"
+            >
+              –
+            </span>
+
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+              <span className="max-w-full truncate text-center text-sm font-semibold">
+                {awayTeam?.name ?? "Visitante"}
               </span>
               <Stepper
                 value={awayScore}
                 onValueChange={handleAwayChange}
                 label="Visitante"
+                size="sm"
                 disabled={isPending}
               />
             </div>
@@ -220,7 +232,7 @@ export function ConfirmResultForm({
 
           <Button
             type="submit"
-            variant="pop-gol"
+            variant="pop"
             size="lg"
             disabled={isPending}
             className="w-full"

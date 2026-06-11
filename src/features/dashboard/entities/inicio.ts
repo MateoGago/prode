@@ -54,15 +54,16 @@ export function countPendingPredictions(
 }
 
 export interface PlayerStats {
-  /** Dense rank (shared on ties) in the leaderboard; null until the player scores. */
+  /** Sequential position in the leaderboard; null until the player scores. */
   position: number | null;
   points: number;
 }
 
 /**
  * The current player's leaderboard position and points. Ranking mirrors the
- * leaderboard table: total points DESC, shared rank on ties. A player absent
- * from the board (no points yet) gets null position and 0 points.
+ * leaderboard table exactly: total points DESC, sequential positions (ties
+ * broken by name), so "tu puesto" matches the table row. A player absent from
+ * the board (no points yet) gets null position and 0 points.
  */
 export function derivePlayerStats(
   rows: LeaderboardRow[],

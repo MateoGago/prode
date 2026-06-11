@@ -454,10 +454,10 @@ describe("ConfirmResultForm", () => {
     expect(screen.getAllByText("1").length).toBeGreaterThan(0);
   });
 
-  // Header identity (PRO-28 fallback): with the panel now listing every match
-  // of the day — not just finished/confirmed ones — each card MUST name the
-  // fixture, or a list of identical "Confirmar resultado" cards is unusable.
-  it("names the fixture in the header for a group match", () => {
+  // Identity (PRO-28 fallback): with the panel now listing every match of the
+  // day — not just finished/confirmed ones — each card MUST name the fixture
+  // (header + per-stepper country labels), or identical cards are unusable.
+  it("shows both team names so the fixture is identifiable", () => {
     render(
       <ConfirmResultForm
         matchId="m1"
@@ -468,10 +468,10 @@ describe("ConfirmResultForm", () => {
       />,
     );
 
-    // A group round renders no advancer radios, so these names only come from
-    // the identifying header.
-    expect(screen.getByText("Argentina")).toBeInTheDocument();
-    expect(screen.getByText("Francia")).toBeInTheDocument();
+    // Names appear in the header ("Argentina vs Francia") and as the stepper
+    // labels, so each name is present at least once.
+    expect(screen.getAllByText("Argentina").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Francia").length).toBeGreaterThan(0);
   });
 
   it("shows a 'Confirmado' badge when the status is confirmed", () => {
