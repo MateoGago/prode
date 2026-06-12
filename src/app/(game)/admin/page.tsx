@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/features/auth/actions/get-current-user";
@@ -13,7 +14,11 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { formatKickoffLong } from "@/shared/datetime";
 import { formatPlaceholder } from "@/features/tournament/entities/bracket";
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ grupo?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -25,19 +30,38 @@ export default async function AdminPage() {
     .maybeSingle();
   if (profile?.role !== "admin") redirect("/");
 
+  // Validate the group filter against the schema's A–L range (teams.group_label
+  // CHECK) — an out-of-range value just falls back to the "today" view.
+  const { grupo } = await searchParams;
+  const requestedGroup = grupo?.toUpperCase();
+  const activeGroup =
+    requestedGroup && /^[A-L]$/.test(requestedGroup)
+      ? requestedGroup
+      : undefined;
+
   // Fetch all data in parallel — independent queries.
   const [matches, unresolvedSlots, teamsData] = await Promise.all([
-    selectCorrectableMatches(),
+    selectCorrectableMatches({ group: activeGroup }),
     selectUnresolvedKnockoutSlots(),
     supabase
       .from("teams")
-      .select("id, name")
+      .select("id, name, group_label")
       .order("name", { ascending: true }),
   ]);
 
   const allTeams: ResolveSlotFormTeamOption[] = (teamsData.data ?? []).map(
     (t) => ({ id: t.id, name: t.name }),
   );
+
+  // Group chips are derived from the data, never hardcoded: only groups that
+  // actually have teams loaded show up.
+  const groups = Array.from(
+    new Set(
+      (teamsData.data ?? [])
+        .map((t) => t.group_label)
+        .filter((g): g is string => g !== null),
+    ),
+  ).sort();
 
   return (
     <section className="grid gap-6">
@@ -49,16 +73,46 @@ export default async function AdminPage() {
           Panel de resultados
         </h1>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Partidos de hoy. Cargá o corregí el resultado final a mano —al
-          confirmar se recalculan los puntos de todas las predicciones de ese
-          partido— sin depender de la sincronización automática.
+          {activeGroup
+            ? `Grupo ${activeGroup}: todos los partidos de la fase de grupos. `
+            : "Partidos de hoy. "}
+          Cargá o corregí el resultado final a mano —al confirmar se recalculan
+          los puntos de todas las predicciones de ese partido— sin depender de
+          la sincronización automática.
         </p>
       </header>
 
+      {/* ── Filtros: Hoy + un chip por grupo ────────────────────────────── */}
+      <nav
+        aria-label="Filtrar partidos"
+        className="flex flex-wrap items-center gap-1.5"
+      >
+        <Link href="/admin" className={chipClass(!activeGroup)}>
+          Hoy
+        </Link>
+        {groups.map((group) => (
+          <Link
+            key={group}
+            href={`/admin?grupo=${group}`}
+            className={chipClass(activeGroup === group)}
+          >
+            Grupo {group}
+          </Link>
+        ))}
+      </nav>
+
       {matches.length === 0 ? (
         <EmptyState
-          title="No hay partidos hoy."
-          description="Cuando haya partidos programados para el día de hoy, vas a poder cargar su resultado acá."
+          title={
+            activeGroup
+              ? `Grupo ${activeGroup} sin partidos.`
+              : "No hay partidos hoy."
+          }
+          description={
+            activeGroup
+              ? "Todavía no hay partidos cargados para este grupo."
+              : "Cuando haya partidos programados para el día de hoy, vas a poder cargar su resultado acá."
+          }
         />
       ) : (
         <div className="grid gap-4">
@@ -146,4 +200,13 @@ export default async function AdminPage() {
       ) : null}
     </section>
   );
+}
+
+/** Pill style for a filter chip — highlighted when it's the active view. */
+function chipClass(active: boolean): string {
+  const base =
+    "rounded-full border px-3 py-1 text-sm font-medium transition-colors";
+  return active
+    ? `${base} border-primary bg-primary-soft text-foreground`
+    : `${base} border-border bg-card text-muted-foreground hover:bg-card-muted`;
 }
