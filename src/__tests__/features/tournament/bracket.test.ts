@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Match, Round, Team } from "@/features/fixtures/entities/match";
 import {
   buildBracket,
+  deriveBracketWinner,
   formatPlaceholder,
   groupsForPlaceholder,
 } from "@/features/tournament/entities/bracket";
@@ -276,5 +277,117 @@ describe("buildBracket — Bracket Structure", () => {
     const bracket = buildBracket([match], []);
 
     expect(bracket[0].label).toBe("Octavos");
+  });
+
+  it("carries scores, winner and penalty flag onto each BracketMatch", () => {
+    const match = knockoutMatch({
+      id: "m6",
+      round: "r16",
+      homeTeam: ARG,
+      awayTeam: BRA,
+      homePlaceholder: null,
+      awayPlaceholder: null,
+      status: "confirmed",
+      homeScore: 2,
+      awayScore: 1,
+      advancerTeam: ARG,
+    });
+
+    const bMatch = buildBracket([match], [ARG, BRA])[0].matches[0];
+
+    expect(bMatch.homeScore).toBe(2);
+    expect(bMatch.awayScore).toBe(1);
+    expect(bMatch.winner).toBe("home");
+    expect(bMatch.decidedByPenalties).toBe(false);
+  });
+
+  it("marks decidedByPenalties when a penalty winner is set", () => {
+    const match = knockoutMatch({
+      id: "m7",
+      round: "qf",
+      homeTeam: ARG,
+      awayTeam: BRA,
+      homePlaceholder: null,
+      awayPlaceholder: null,
+      status: "confirmed",
+      homeScore: 1,
+      awayScore: 1,
+      penaltyWinnerTeam: BRA,
+      advancerTeam: BRA,
+    });
+
+    const bMatch = buildBracket([match], [ARG, BRA])[0].matches[0];
+
+    expect(bMatch.decidedByPenalties).toBe(true);
+    expect(bMatch.winner).toBe("away");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deriveBracketWinner — advancer-first, score fallback
+// ---------------------------------------------------------------------------
+
+describe("deriveBracketWinner — advancer / score resolution", () => {
+  it("prefers the persisted advancer (home side)", () => {
+    expect(
+      deriveBracketWinner(
+        knockoutMatch({
+          round: "sf",
+          homeTeam: ARG,
+          awayTeam: BRA,
+          advancerTeam: ARG,
+        }),
+      ),
+    ).toBe("home");
+  });
+
+  it("prefers the persisted advancer (away side), even with a level score", () => {
+    expect(
+      deriveBracketWinner(
+        knockoutMatch({
+          round: "sf",
+          homeTeam: ARG,
+          awayTeam: BRA,
+          homeScore: 1,
+          awayScore: 1,
+          penaltyWinnerTeam: BRA,
+          advancerTeam: BRA,
+        }),
+      ),
+    ).toBe("away");
+  });
+
+  it("falls back to the higher score when no advancer is set", () => {
+    expect(
+      deriveBracketWinner(
+        knockoutMatch({
+          round: "r32",
+          homeTeam: ARG,
+          awayTeam: BRA,
+          homeScore: 0,
+          awayScore: 3,
+        }),
+      ),
+    ).toBe("away");
+  });
+
+  it("returns null for a level score with no advancer", () => {
+    expect(
+      deriveBracketWinner(
+        knockoutMatch({
+          round: "r32",
+          homeTeam: ARG,
+          awayTeam: BRA,
+          homeScore: 2,
+          awayScore: 2,
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null for a scheduled match (no scores, no advancer)", () => {
+    expect(
+      deriveBracketWinner(knockoutMatch({ round: "r32", status: "scheduled" })),
+    ).toBeNull();
   });
 });

@@ -79,6 +79,7 @@ describe("getMatchBreakdown", () => {
     expect(result[0]).toEqual({
       matchId: "m1",
       matchLabel: "Argentina vs Brazil",
+      kickoffAt: "2026-06-01T18:00:00Z",
       homeTeamName: "Argentina",
       awayTeamName: "Brazil",
       homeFlagUrl: null,

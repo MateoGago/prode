@@ -182,6 +182,7 @@ function breakdown(
 ): MatchBreakdownItem {
   return {
     matchLabel: "Brasil vs Serbia",
+    kickoffAt: "2026-06-15T19:00:00.000Z",
     homeTeamName: "Brasil",
     awayTeamName: "Serbia",
     homeFlagUrl: null,

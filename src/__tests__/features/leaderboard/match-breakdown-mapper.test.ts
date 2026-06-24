@@ -16,6 +16,7 @@ describe("mapMatchBreakdown", () => {
     match: {
       home_score: 3,
       away_score: 0,
+      kickoff_at: "2026-06-15T19:00:00.000Z",
       home_team: {
         name: "Argentina",
         flag_url: "https://flagcdn.com/w40/ar.png",
@@ -32,6 +33,7 @@ describe("mapMatchBreakdown", () => {
       {
         matchId: "m1",
         matchLabel: "Argentina vs Brazil",
+        kickoffAt: "2026-06-15T19:00:00.000Z",
         homeTeamName: "Argentina",
         awayTeamName: "Brazil",
         homeFlagUrl: "https://flagcdn.com/w40/ar.png",

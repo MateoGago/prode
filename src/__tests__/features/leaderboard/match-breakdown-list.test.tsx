@@ -11,6 +11,7 @@ const makeItem = (
 ): MatchBreakdownItem => ({
   matchId: "m1",
   matchLabel: "Argentina vs Brazil",
+  kickoffAt: "2026-06-15T19:00:00.000Z",
   homeTeamName: "Argentina",
   awayTeamName: "Brazil",
   homeFlagUrl: null,

@@ -17,10 +17,20 @@ export type BracketSlot =
   | { kind: "team"; team: Team }
   | { kind: "placeholder"; label: string };
 
+/** Which side advanced from a knockout match (null while undecided). */
+export type BracketWinner = "home" | "away" | null;
+
 export interface BracketMatch {
   id: string;
   home: BracketSlot;
   away: BracketSlot;
+  /** Final score; null until the match is finished/confirmed. */
+  homeScore: number | null;
+  awayScore: number | null;
+  /** Resolved advancer side, so the UI can emphasise it and dim the loser. */
+  winner: BracketWinner;
+  /** True when the tie was settled on penalties (level after 120'). */
+  decidedByPenalties: boolean;
   /**
    * ISO 8601 UTC string. Kept as a string (not Date) so the whole
    * BracketRound[] is serializable across the RSC→Client boundary;
@@ -138,6 +148,32 @@ function resolveSlot(
 }
 
 /**
+ * Resolves which side advanced from a knockout match for UI emphasis.
+ *
+ * Priority:
+ * 1. The persisted `advancerTeam` (authoritative — covers penalty wins where
+ *    the 120' score is level), matched against the resolved home/away team.
+ * 2. Otherwise compare scores (a plain regulation/ET result).
+ * 3. `null` when undecided (no advancer, no scores, or a draw with no advancer).
+ *
+ * Exported for unit testing.
+ */
+export function deriveBracketWinner(match: Match): BracketWinner {
+  const advancerId = match.advancerTeam?.id ?? null;
+  if (advancerId !== null) {
+    if (match.homeTeam?.id === advancerId) return "home";
+    if (match.awayTeam?.id === advancerId) return "away";
+  }
+
+  if (match.homeScore !== null && match.awayScore !== null) {
+    if (match.homeScore > match.awayScore) return "home";
+    if (match.awayScore > match.homeScore) return "away";
+  }
+
+  return null;
+}
+
+/**
  * Organises knockout matches into ordered `BracketRound[]`.
  *
  * - Group-stage matches are ignored.
@@ -159,6 +195,10 @@ export function buildBracket(matches: Match[], _teams: Team[]): BracketRound[] {
       id: match.id,
       home: resolveSlot(match.homeTeam, match.homePlaceholder),
       away: resolveSlot(match.awayTeam, match.awayPlaceholder),
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      winner: deriveBracketWinner(match),
+      decidedByPenalties: match.penaltyWinnerTeam !== null,
       kickoffAt: match.kickoffAt.toISOString(),
       status: match.status,
     };

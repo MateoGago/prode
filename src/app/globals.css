@@ -298,6 +298,54 @@
   padding-inline: 1rem;
 }
 
+/* ---------------------------------------------------------------------------
+ * Knockout bracket connectors (see features/tournament/components/bracket-view).
+ *
+ * The flex layout lives in the component (Tailwind utilities); only the
+ * connector pseudo-elements live here because they can't be expressed as
+ * utilities. Round columns are equal-height flex siblings and each round's
+ * cells share the column height via flex:1, so a round-N card sits at the
+ * vertical midpoint of its two round-(N-1) feeders. Connectors are drawn in the
+ * gutters; the opaque card (z-index:1) hides the segment that runs under it.
+ * `--ko-gap` is set inline on the funnel; theme-aware via --border-strong.
+ * ------------------------------------------------------------------------- */
+
+/* Horizontal line through the card's vertical centre, reaching into the
+ * gutter(s) it connects. */
+.ko-cell[data-line]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  height: 0;
+  border-top: 2px solid var(--border-strong);
+  z-index: 0;
+}
+.ko-cell[data-line="out"]::after {
+  left: 0;
+  right: calc(var(--ko-gap) * -0.5);
+}
+.ko-cell[data-line="in"]::after {
+  left: calc(var(--ko-gap) * -0.5);
+  right: 0;
+}
+.ko-cell[data-line="both"]::after {
+  left: calc(var(--ko-gap) * -0.5);
+  right: calc(var(--ko-gap) * -0.5);
+}
+
+/* Vertical line joining a pair of feeders, on the gutter midline. Spans
+ * 25%–75% so its ends meet the two feeder cards' centres. */
+.ko-cell[data-join]::before {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: calc(var(--ko-gap) * -0.5);
+  width: 0;
+  border-left: 2px solid var(--border-strong);
+  z-index: 0;
+}
+
 /*
  * While the predictions board has unsaved edits, its floating save drawer
  * (BatchBar, marked [data-save-drawer]) takes over the bottom of the screen —
