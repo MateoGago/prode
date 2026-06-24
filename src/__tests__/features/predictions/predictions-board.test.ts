@@ -463,10 +463,12 @@ describe("filterPredicate (REQ-05)", () => {
     ).toBe(false);
   });
 
-  it("pendientes: locked match with no saved prediction IS included (REQ-05)", () => {
-    // A match that locked before the user saved it is still "pending"
+  it("pendientes: locked match with no saved prediction is NOT included", () => {
+    // A match that locked before the user saved it can no longer be loaded, so
+    // it is NOT pending work — there is nothing left to do. (Product decision:
+    // "Pendientes" only counts matches you can still load.)
     expect(filterPredicate("pendientes", "m1", {}, {}, LOCKED, PAST, NOW)).toBe(
-      true,
+      false,
     );
   });
 

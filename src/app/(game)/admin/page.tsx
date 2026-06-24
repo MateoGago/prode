@@ -11,8 +11,12 @@ import { ResolveSlotForm } from "@/features/results/components/resolve-slot-form
 import type { ResolveSlotFormTeamOption } from "@/features/results/components/resolve-slot-form";
 import { createClient } from "@/shared/supabase/server";
 import { EmptyState } from "@/shared/ui/empty-state";
+import { TeamFlag } from "@/shared/ui/team-flag";
 import { formatKickoffLong } from "@/shared/datetime";
-import { formatPlaceholder } from "@/features/tournament/entities/bracket";
+import {
+  formatPlaceholder,
+  groupsForPlaceholder,
+} from "@/features/tournament/entities/bracket";
 
 export default async function AdminPage({
   searchParams,
@@ -49,9 +53,27 @@ export default async function AdminPage({
       .order("name", { ascending: true }),
   ]);
 
-  const allTeams: ResolveSlotFormTeamOption[] = (teamsData.data ?? []).map(
-    (t) => ({ id: t.id, name: t.name }),
-  );
+  const allTeams = (teamsData.data ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    groupLabel: t.group_label,
+  }));
+
+  // A slot can only be filled by teams from the group(s) its placeholder names
+  // (e.g. "1J" → group J, "3A/B/C/D/F" → those five groups). Winner/loser slots
+  // ("W74") have no group → null → every team stays selectable.
+  const teamsForPlaceholder = (
+    placeholder: string | null,
+  ): ResolveSlotFormTeamOption[] => {
+    const groups = groupsForPlaceholder(placeholder ?? "");
+    const eligible =
+      groups === null
+        ? allTeams
+        : allTeams.filter(
+            (t) => t.groupLabel !== null && groups.includes(t.groupLabel),
+          );
+    return eligible.map((t) => ({ id: t.id, name: t.name }));
+  };
 
   // Group chips are derived from the data, never hardcoded: only groups that
   // actually have teams loaded show up.
@@ -169,12 +191,17 @@ export default async function AdminPage({
                     matchId={slot.matchId}
                     slot="home"
                     slotHint={formatPlaceholder(slot.homePlaceholder ?? "")}
-                    teams={allTeams}
+                    teams={teamsForPlaceholder(slot.homePlaceholder)}
                     onSubmit={resolveSlotAction}
                   />
                 ) : (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Local:</span>{" "}
+                  <p className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Local:</span>
+                    <TeamFlag
+                      name={slot.homeTeamName ?? ""}
+                      flagUrl={slot.homeTeamFlagUrl}
+                      size={18}
+                    />
                     <span className="font-medium">{slot.homeTeamName}</span>
                   </p>
                 )}
@@ -184,12 +211,17 @@ export default async function AdminPage({
                     matchId={slot.matchId}
                     slot="away"
                     slotHint={formatPlaceholder(slot.awayPlaceholder ?? "")}
-                    teams={allTeams}
+                    teams={teamsForPlaceholder(slot.awayPlaceholder)}
                     onSubmit={resolveSlotAction}
                   />
                 ) : (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Visitante:</span>{" "}
+                  <p className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Visitante:</span>
+                    <TeamFlag
+                      name={slot.awayTeamName ?? ""}
+                      flagUrl={slot.awayTeamFlagUrl}
+                      size={18}
+                    />
                     <span className="font-medium">{slot.awayTeamName}</span>
                   </p>
                 )}

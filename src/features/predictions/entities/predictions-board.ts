@@ -281,11 +281,12 @@ export function filterPredicate(
     case "pendientes": {
       const saved = savedMap[matchId] ?? null;
       const working = workingMap[matchId];
-      // For open matches: not-yet-saved (empty) or edited-not-yet-saved (dirty).
-      // For locked matches: include if there is still no saved prediction — the
-      // user never got a chance to save it (REQ-05: locked-unsaved → Pendientes).
+      // "Pendientes" = work you can STILL do. A locked match (confirmed/live/
+      // past kickoff) can no longer be loaded, so it is never pending — even if
+      // it was never saved (you missed it; there's nothing left to do). This
+      // mirrors deriveProgress's "faltan", which also drops locked matches.
       if (!lock.editable) {
-        return saved === null;
+        return false;
       }
       const state = deriveCardState(saved, working, lock);
       return state === "empty" || state === "dirty";

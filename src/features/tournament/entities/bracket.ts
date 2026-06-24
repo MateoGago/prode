@@ -98,6 +98,31 @@ export function formatPlaceholder(raw: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// groupsForPlaceholder
+// ---------------------------------------------------------------------------
+
+/**
+ * Derives the group letters a knockout slot can be filled from, for the admin
+ * team selector. Lets the dropdown show only the teams that could legitimately
+ * occupy a slot instead of all 48.
+ *
+ * - `1J` / `2H`     → `["J"]` / `["H"]` (a single group's 1st/2nd place)
+ * - `3A/B/C/D/F`    → `["A","B","C","D","F"]` (best-third: several groups)
+ * - `W74` / `L101`  → `null` (a match winner/loser can be ANY team — no filter)
+ * - anything else   → `null` (unknown shape → no filter, show every team)
+ */
+export function groupsForPlaceholder(raw: string): string[] | null {
+  // Best-third first (so "3A/B/…" isn't read as group position "3X").
+  const bestThirdMatch = /^3([A-Z](?:\/[A-Z])+)$/.exec(raw);
+  if (bestThirdMatch) return bestThirdMatch[1].split("/");
+
+  const groupPositionMatch = /^[12]([A-Z])$/.exec(raw);
+  if (groupPositionMatch) return [groupPositionMatch[1]];
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // buildBracket
 // ---------------------------------------------------------------------------
 

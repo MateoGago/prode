@@ -4,6 +4,7 @@ import type { Match, Round, Team } from "@/features/fixtures/entities/match";
 import {
   buildBracket,
   formatPlaceholder,
+  groupsForPlaceholder,
 } from "@/features/tournament/entities/bracket";
 
 // ---------------------------------------------------------------------------
@@ -72,6 +73,39 @@ describe("formatPlaceholder — Placeholder Formatting", () => {
   it("returns the raw string unchanged when it matches no known pattern", () => {
     expect(formatPlaceholder("UNKNOWN")).toBe("UNKNOWN");
     expect(formatPlaceholder("")).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// groupsForPlaceholder — admin selector group filter
+// ---------------------------------------------------------------------------
+
+describe("groupsForPlaceholder — Slot Group Filter", () => {
+  it("returns the single group for a 1st/2nd-place placeholder", () => {
+    expect(groupsForPlaceholder("1J")).toEqual(["J"]);
+    expect(groupsForPlaceholder("2H")).toEqual(["H"]);
+    expect(groupsForPlaceholder("1A")).toEqual(["A"]);
+  });
+
+  it("returns every group for a best-third placeholder", () => {
+    expect(groupsForPlaceholder("3A/B/C/D/F")).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+      "F",
+    ]);
+    expect(groupsForPlaceholder("3E/F/G/H")).toEqual(["E", "F", "G", "H"]);
+  });
+
+  it("returns null for winner/loser placeholders (any team can fill it)", () => {
+    expect(groupsForPlaceholder("W74")).toBeNull();
+    expect(groupsForPlaceholder("L101")).toBeNull();
+  });
+
+  it("returns null for unknown or empty placeholders (no filter)", () => {
+    expect(groupsForPlaceholder("UNKNOWN")).toBeNull();
+    expect(groupsForPlaceholder("")).toBeNull();
   });
 });
 
