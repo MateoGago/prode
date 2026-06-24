@@ -1,14 +1,15 @@
 "use server";
 
 /**
- * Read knockout matches that still have at least one unresolved slot
- * (home_team_id IS NULL OR away_team_id IS NULL). Admin use only — regular
- * reads go through the /fixture RSC page.
+ * Read every knockout match for the admin bracket panel, regardless of whether
+ * its slots are filled. Empty slots (home_team_id / away_team_id IS NULL) get an
+ * assign form; filled slots get an edit form so an admin can fix a mistaken
+ * assignment. Admin use only — regular reads go through the /fixture RSC page.
  */
 
 import { createClient } from "@/shared/supabase/server";
 
-export interface UnresolvedSlot {
+export interface KnockoutSlot {
   matchId: string;
   /** Knockout round label for display (e.g. "r16", "qf"). */
   round: string;
@@ -28,7 +29,7 @@ export interface UnresolvedSlot {
   awayPlaceholder: string | null;
 }
 
-interface UnresolvedMatchRow {
+interface KnockoutMatchRow {
   id: string;
   round: string;
   kickoff_at: string;
@@ -38,9 +39,7 @@ interface UnresolvedMatchRow {
   away_team: { id: string; name: string; flag_url: string | null } | null;
 }
 
-export async function selectUnresolvedKnockoutSlots(): Promise<
-  UnresolvedSlot[]
-> {
+export async function selectKnockoutSlots(): Promise<KnockoutSlot[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -55,12 +54,11 @@ export async function selectUnresolvedKnockoutSlots(): Promise<
        away_team:teams!matches_away_team_id_fkey(id, name, flag_url)`,
     )
     .eq("is_knockout", true)
-    .or("home_team_id.is.null,away_team_id.is.null")
     .order("kickoff_at", { ascending: true });
 
   if (error) throw new Error(error.message);
 
-  const rows = (data as unknown as UnresolvedMatchRow[] | null) ?? [];
+  const rows = (data as unknown as KnockoutMatchRow[] | null) ?? [];
 
   return rows.map((row) => ({
     matchId: row.id,

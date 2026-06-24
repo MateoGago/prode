@@ -5,13 +5,12 @@ import { getCurrentUser } from "@/features/auth/actions/get-current-user";
 import { confirmResultAction } from "@/features/results/actions/confirm-result-action";
 import { ConfirmResultForm } from "@/features/results/components/confirm-result-form";
 import { selectCorrectableMatches } from "@/features/results/actions/select-correctable-matches";
-import { selectUnresolvedKnockoutSlots } from "@/features/results/actions/select-unresolved-slots";
+import { selectKnockoutSlots } from "@/features/results/actions/select-knockout-slots";
 import { resolveSlotAction } from "@/features/results/actions/resolve-slot-action";
 import { ResolveSlotForm } from "@/features/results/components/resolve-slot-form";
 import type { ResolveSlotFormTeamOption } from "@/features/results/components/resolve-slot-form";
 import { createClient } from "@/shared/supabase/server";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { TeamFlag } from "@/shared/ui/team-flag";
 import { formatKickoffLong } from "@/shared/datetime";
 import {
   formatPlaceholder,
@@ -44,9 +43,9 @@ export default async function AdminPage({
       : undefined;
 
   // Fetch all data in parallel — independent queries.
-  const [matches, unresolvedSlots, teamsData] = await Promise.all([
+  const [matches, knockoutSlots, teamsData] = await Promise.all([
     selectCorrectableMatches({ group: activeGroup }),
-    selectUnresolvedKnockoutSlots(),
+    selectKnockoutSlots(),
     supabase
       .from("teams")
       .select("id, name, group_label")
@@ -156,23 +155,23 @@ export default async function AdminPage({
       )}
 
       {/* ── Bracket slot assignment ─────────────────────────────────────── */}
-      {unresolvedSlots.length > 0 ? (
+      {knockoutSlots.length > 0 ? (
         <div className="grid gap-4">
           <header className="grid gap-1.5">
             <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
               Llave
             </p>
             <h2 className="font-heading text-xl font-bold tracking-tight">
-              Casilleros sin equipo
+              Equipos de la fase eliminatoria
             </h2>
             <p className="max-w-prose text-sm text-muted-foreground">
-              Asigná el equipo que ocupa cada casillero vacío en la fase
-              eliminatoria.
+              Asigná el equipo de cada casillero vacío, o corregí uno ya cargado
+              si quedó mal —elegí el equipo y tocá Reasignar.
             </p>
           </header>
 
           <div className="grid gap-3">
-            {unresolvedSlots.map((slot) => (
+            {knockoutSlots.map((slot) => (
               <div
                 key={`${slot.matchId}-slots`}
                 className="grid gap-2 rounded-xl border border-border bg-card p-4"
@@ -186,45 +185,27 @@ export default async function AdminPage({
                   </p>
                 </div>
 
-                {slot.homeTeamId === null ? (
-                  <ResolveSlotForm
-                    matchId={slot.matchId}
-                    slot="home"
-                    slotHint={formatPlaceholder(slot.homePlaceholder ?? "")}
-                    teams={teamsForPlaceholder(slot.homePlaceholder)}
-                    onSubmit={resolveSlotAction}
-                  />
-                ) : (
-                  <p className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Local:</span>
-                    <TeamFlag
-                      name={slot.homeTeamName ?? ""}
-                      flagUrl={slot.homeTeamFlagUrl}
-                      size={18}
-                    />
-                    <span className="font-medium">{slot.homeTeamName}</span>
-                  </p>
-                )}
+                <ResolveSlotForm
+                  matchId={slot.matchId}
+                  slot="home"
+                  slotHint={formatPlaceholder(slot.homePlaceholder ?? "")}
+                  currentTeamId={slot.homeTeamId ?? undefined}
+                  currentTeamName={slot.homeTeamName ?? undefined}
+                  currentTeamFlagUrl={slot.homeTeamFlagUrl}
+                  teams={teamsForPlaceholder(slot.homePlaceholder)}
+                  onSubmit={resolveSlotAction}
+                />
 
-                {slot.awayTeamId === null ? (
-                  <ResolveSlotForm
-                    matchId={slot.matchId}
-                    slot="away"
-                    slotHint={formatPlaceholder(slot.awayPlaceholder ?? "")}
-                    teams={teamsForPlaceholder(slot.awayPlaceholder)}
-                    onSubmit={resolveSlotAction}
-                  />
-                ) : (
-                  <p className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Visitante:</span>
-                    <TeamFlag
-                      name={slot.awayTeamName ?? ""}
-                      flagUrl={slot.awayTeamFlagUrl}
-                      size={18}
-                    />
-                    <span className="font-medium">{slot.awayTeamName}</span>
-                  </p>
-                )}
+                <ResolveSlotForm
+                  matchId={slot.matchId}
+                  slot="away"
+                  slotHint={formatPlaceholder(slot.awayPlaceholder ?? "")}
+                  currentTeamId={slot.awayTeamId ?? undefined}
+                  currentTeamName={slot.awayTeamName ?? undefined}
+                  currentTeamFlagUrl={slot.awayTeamFlagUrl}
+                  teams={teamsForPlaceholder(slot.awayPlaceholder)}
+                  onSubmit={resolveSlotAction}
+                />
               </div>
             ))}
           </div>

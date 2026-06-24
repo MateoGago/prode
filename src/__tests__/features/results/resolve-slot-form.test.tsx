@@ -21,6 +21,14 @@ vi.mock("sonner", () => ({
   },
 }));
 
+// next/image renders a plain <img> in jsdom so flag alt text is queryable.
+vi.mock("next/image", () => ({
+  default: ({ src, alt }: { src: string; alt: string }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} />
+  ),
+}));
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const TEAMS: ResolveSlotFormTeamOption[] = [
@@ -204,6 +212,101 @@ describe("ResolveSlotForm — home slot", () => {
 
     resolve(ok());
     await waitFor(() => expect(btn).not.toBeDisabled());
+  });
+});
+
+describe("ResolveSlotForm — edit mode (slot already assigned)", () => {
+  it("pre-selects the currently assigned team", () => {
+    render(
+      <ResolveSlotForm
+        matchId="m1"
+        slot="home"
+        currentTeamId="team-bra"
+        teams={TEAMS}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    expect(screen.getByRole("combobox")).toHaveValue("team-bra");
+  });
+
+  it("shows the previously loaded team with its country flag", () => {
+    render(
+      <ResolveSlotForm
+        matchId="m1"
+        slot="home"
+        currentTeamId="team-bra"
+        currentTeamName="Brasil"
+        currentTeamFlagUrl="https://flagcdn.com/w320/br.png"
+        teams={TEAMS}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    // The previous value is visible as a labelled line, not only inside the select.
+    const current = screen.getByText("Actual:");
+    expect(current.parentElement).toHaveTextContent("Brasil");
+    // And the country flag stays in the UI.
+    expect(screen.getByAltText("Bandera de Brasil")).toBeInTheDocument();
+  });
+
+  it("labels the button 'Reasignar' when a team is already assigned", () => {
+    render(
+      <ResolveSlotForm
+        matchId="m1"
+        slot="home"
+        currentTeamId="team-bra"
+        teams={TEAMS}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /reasignar/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the button disabled until a different team is chosen", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResolveSlotForm
+        matchId="m1"
+        slot="home"
+        currentTeamId="team-bra"
+        teams={TEAMS}
+        onSubmit={vi.fn().mockResolvedValue(ok())}
+      />,
+    );
+
+    const btn = screen.getByRole("button", { name: /reasignar/i });
+    // No change yet → nothing to save.
+    expect(btn).toBeDisabled();
+
+    await user.selectOptions(screen.getByRole("combobox"), "Argentina");
+    expect(btn).not.toBeDisabled();
+  });
+
+  it("calls onSubmit with the newly chosen teamId on reassign", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(ok());
+    render(
+      <ResolveSlotForm
+        matchId="m1"
+        slot="home"
+        currentTeamId="team-bra"
+        teams={TEAMS}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.selectOptions(screen.getByRole("combobox"), "Argentina");
+    await user.click(screen.getByRole("button", { name: /reasignar/i }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const arg = onSubmit.mock.calls[0][0] as ResolveSlotInput;
+    expect(arg.matchId).toBe("m1");
+    expect(arg.slot).toBe("home");
+    expect(arg.teamId).toBe("team-arg");
   });
 });
 
