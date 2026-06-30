@@ -254,22 +254,58 @@ describe("buildBracket — Bracket Structure", () => {
     expect(bracket).toEqual([]);
   });
 
-  it("orders matches within a round by kickoffAt ascending", () => {
+  it("falls back to kickoffAt ascending when no FIFA bracket number is present", () => {
     const matches: Match[] = [
       knockoutMatch({
         id: "late",
         round: "r32",
+        externalRef: "ref-late",
         kickoffAt: new Date("2026-06-28T22:00:00.000Z"),
       }),
       knockoutMatch({
         id: "early",
         round: "r32",
+        externalRef: "ref-early",
         kickoffAt: new Date("2026-06-28T16:00:00.000Z"),
       }),
     ];
 
     const bracket = buildBracket(matches, []);
     expect(bracket[0].matches.map((m) => m.id)).toEqual(["early", "late"]);
+  });
+
+  it("orders a round by the canonical bracket tree, NOT by kickoff (so crossings land on the real feeders)", () => {
+    // R16 feeders, given in kickoff order. The tree order is 89,90,93,94,…
+    // (P97=W89/W90, P98=W93/W94, …) — deliberately different from kickoff.
+    const r16ByKickoff: Match[] = [
+      { num: 91, t: "2026-07-05T20:00:00.000Z" },
+      { num: 89, t: "2026-07-04T21:00:00.000Z" },
+      { num: 95, t: "2026-07-07T16:00:00.000Z" },
+      { num: 93, t: "2026-07-06T19:00:00.000Z" },
+      { num: 90, t: "2026-07-04T17:00:00.000Z" },
+      { num: 96, t: "2026-07-07T20:00:00.000Z" },
+      { num: 92, t: "2026-07-06T00:00:00.000Z" },
+      { num: 94, t: "2026-07-07T00:00:00.000Z" },
+    ].map(({ num, t }) =>
+      knockoutMatch({
+        id: `ko-${num}`,
+        round: "r16",
+        externalRef: `wc2026-ko-${num}`,
+        kickoffAt: new Date(t),
+      }),
+    );
+
+    const bracket = buildBracket(r16ByKickoff, []);
+    expect(bracket[0].matches.map((m) => m.id)).toEqual([
+      "ko-89",
+      "ko-90",
+      "ko-93",
+      "ko-94",
+      "ko-91",
+      "ko-92",
+      "ko-95",
+      "ko-96",
+    ]);
   });
 
   it("includes the round label on each BracketRound", () => {

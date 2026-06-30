@@ -44,13 +44,17 @@ export function PredictionsPageClient({
   // On load, land on the next still-playable match's day (Día is the default
   // view) so the user doesn't scroll past finished group days to reach the
   // current stage (e.g. the Round of 32). null → no scroll (nothing pending).
-  const nextMatch = selectNextScheduledMatch(days.flatMap((d) => d.matches));
+  // `days` buckets every rendered match (group + resolved knockout), so its
+  // flattened list doubles as the provider's full lock/state source.
+  const boardMatches = days.flatMap((d) => d.matches);
+  const nextMatch = selectNextScheduledMatch(boardMatches);
   const scrollAnchor = nextMatch ? arDayParts(nextMatch.kickoffAt).key : null;
 
   return (
     <PredictionsProvider
       initialPredictions={initialPredictionsByMatchId}
       groups={groups}
+      boardMatches={boardMatches}
     >
       <ScrollToAnchorOnLoad anchor={scrollAnchor} />
       <ProgressHeader />

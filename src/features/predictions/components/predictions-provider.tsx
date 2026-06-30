@@ -28,6 +28,7 @@ import { saveBatchPredictions } from "@/features/predictions/actions/save-batch-
 import type { PredictionInput } from "@/features/predictions/entities/prediction";
 import type { GroupBlock } from "@/features/predictions/entities/predictions-page";
 import {
+  type BoardMatch,
   type CardState,
   type FilterKind,
   type GroupProgress,
@@ -117,6 +118,17 @@ export interface PredictionsProviderProps {
   initialPredictions: Record<string, PredictionInput>;
   /** Grouped matches (used for progress + group-chip derivations). */
   groups: GroupBlock[];
+  /**
+   * EVERY match rendered on the board — group stage AND resolved knockout
+   * rounds (the "Día"/"Etapa" cards). Lock/state/batch/filter derivations key
+   * off this: `groups` alone omits knockout matches, so a knockout card could
+   * never find its own status and stayed frozen on "ya empezó" even after the
+   * admin confirmed it. Progress + group chips stay group-scoped (see `groups`).
+   *
+   * Optional: when omitted it falls back to the group matches (the group-stage
+   * board), preserving the original behaviour for callers that only render groups.
+   */
+  boardMatches?: BoardMatch[];
   children: ReactNode;
   /**
    * Optional fixed clock for deterministic rendering in tests.
@@ -133,6 +145,7 @@ export interface PredictionsProviderProps {
 export function PredictionsProvider({
   initialPredictions,
   groups,
+  boardMatches,
   children,
   now = new Date(),
 }: PredictionsProviderProps) {
@@ -162,6 +175,21 @@ export function PredictionsProvider({
       ),
     [groups],
   );
+
+  // The full lockable set: the board matches when provided, else the group
+  // matches (group-stage-only fallback for callers that omit the prop).
+  const lockableMatches: BoardMatch[] = useMemo(
+    () => boardMatches ?? groups.flatMap((g) => g.matches),
+    [boardMatches, groups],
+  );
+
+  // Lock/state lookup over EVERY board match (group + resolved knockout). Keyed
+  // by id so getLock can find a knockout match's status — `groups` can't.
+  const matchById = useMemo(() => {
+    const map = new Map<string, BoardMatch>();
+    for (const match of lockableMatches) map.set(match.id, match);
+    return map;
+  }, [lockableMatches]);
 
   // Group chip data (matchIds per group)
   const groupMatchIds = useMemo(
@@ -214,18 +242,13 @@ export function PredictionsProvider({
 
   const getLock = useCallback(
     (matchId: string, kickoffAt: Date): LockInfo => {
-      // Find match status from groups
-      let status: "scheduled" | "live" | "finished" | "confirmed" | undefined;
-      for (const group of groups) {
-        const match = group.matches.find((m) => m.id === matchId);
-        if (match) {
-          status = match.status as typeof status;
-          break;
-        }
-      }
+      // Status comes from the full board-match map so knockout cards (absent
+      // from `groups`) resolve their real status — once confirmed, the card
+      // flips to "confirmed" instead of staying frozen on "ya empezó".
+      const status = matchById.get(matchId)?.status;
       return deriveLock({ kickoffAt, status }, now);
     },
-    [groups, now],
+    [matchById, now],
   );
 
   const getCardState = useCallback(
@@ -240,54 +263,43 @@ export function PredictionsProvider({
 
   const getBatch = useCallback((): UpsertItem[] => {
     // Build lock set using the injected clock (now prop, defaults to new Date())
+    // over EVERY board match, so a locked knockout edit is excluded too.
     const lockSet = new Set<string>();
-    for (const group of groups) {
-      for (const match of group.matches) {
-        const lock = deriveLock(
-          {
-            kickoffAt: match.kickoffAt,
-            status: match.status as Parameters<typeof deriveLock>[0]["status"],
-          },
-          now,
-        );
-        if (!lock.editable) lockSet.add(match.id);
-      }
+    for (const match of lockableMatches) {
+      const lock = deriveLock(
+        { kickoffAt: match.kickoffAt, status: match.status },
+        now,
+      );
+      if (!lock.editable) lockSet.add(match.id);
     }
     return selectBatch(workingMap, savedMap, lockSet);
-  }, [groups, now, workingMap, savedMap]);
+  }, [lockableMatches, now, workingMap, savedMap]);
 
   const getFilterCount = useCallback(
     (kind: FilterKind): number => {
       let count = 0;
-      for (const group of groups) {
-        for (const match of group.matches) {
-          const lock = deriveLock(
-            {
-              kickoffAt: match.kickoffAt,
-              status: match.status as Parameters<
-                typeof deriveLock
-              >[0]["status"],
-            },
+      for (const match of lockableMatches) {
+        const lock = deriveLock(
+          { kickoffAt: match.kickoffAt, status: match.status },
+          now,
+        );
+        if (
+          filterPredicate(
+            kind,
+            match.id,
+            savedMap,
+            workingMap,
+            lock,
+            match.kickoffAt,
             now,
-          );
-          if (
-            filterPredicate(
-              kind,
-              match.id,
-              savedMap,
-              workingMap,
-              lock,
-              match.kickoffAt,
-              now,
-            )
-          ) {
-            count++;
-          }
+          )
+        ) {
+          count++;
         }
       }
       return count;
     },
-    [groups, now, savedMap, workingMap],
+    [lockableMatches, now, savedMap, workingMap],
   );
 
   const jumpToGroup = useCallback((label: string) => {

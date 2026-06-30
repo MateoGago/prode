@@ -11,11 +11,10 @@
  *    regardless of status. The day boundary uses arDayParts — the SAME
  *    America/Argentina/Buenos_Aires definition the rest of the UI shows kickoffs
  *    in — so a 21:00 ART kickoff lands under the ART day, never the UTC one.
- *  - Group view (`group` set): every group-stage match of that group across the
- *    whole tournament. This is the escape hatch for a late-night game: a 23:00
- *    ART kickoff still belongs to its own kickoff day, so once midnight passes
- *    the "today" view drops it — the admin picks the group and corrects it
- *    anyway, no clock pressure.
+ *  - Round view (`round` set): every match of that knockout round across the
+ *    whole tournament. This is the escape hatch once the group stage is over:
+ *    the admin picks a phase (16avos, Octavos, …) and loads/corrects its results
+ *    regardless of the calendar day, no clock pressure.
  *
  * Why no status filter: the panel is the manual fallback when the openfootball
  * sync hasn't loaded results. Filtering to finished/confirmed hid every match
@@ -43,11 +42,11 @@ interface CorrectableMatchRow {
 
 export interface SelectCorrectableMatchesOptions {
   /**
-   * When set (e.g. "D"), return ALL group-stage matches of that group across the
-   * tournament, ignoring the day filter — the escape hatch for a late-night game
-   * whose AR kickoff day is no longer "today".
+   * When set (e.g. "r16"), return ALL matches of that round across the
+   * tournament, ignoring the day filter — the escape hatch for loading a
+   * knockout phase's results regardless of the calendar day.
    */
-  group?: string;
+  round?: Round;
   /** Injectable clock for the default "today" view (kept for tests). */
   now?: Date;
 }
@@ -72,7 +71,7 @@ function toCorrectableMatch(row: CorrectableMatchRow): CorrectableMatch {
 export async function selectCorrectableMatches(
   options: SelectCorrectableMatchesOptions = {},
 ): Promise<CorrectableMatch[]> {
-  const { group, now = new Date() } = options;
+  const { round, now = new Date() } = options;
   const supabase = await createClient();
 
   let query = supabase
@@ -92,11 +91,9 @@ export async function selectCorrectableMatches(
     .not("home_team_id", "is", null)
     .not("away_team_id", "is", null);
 
-  // Group view narrows to the group stage in SQL; the group_label match itself
-  // happens in memory below (≤72 group matches — cheaper and simpler than an
-  // embedded PostgREST filter on the joined teams resource). Applied while the
+  // Round view narrows to a single round (e.g. "r16") in SQL. Applied while the
   // builder is still a filter builder, before .order() turns it into a transform.
-  if (group) query = query.eq("round", "group");
+  if (round) query = query.eq("round", round);
 
   const { data, error } = await query.order("kickoff_at", { ascending: true });
   if (error) throw new Error(error.message);
@@ -106,12 +103,9 @@ export async function selectCorrectableMatches(
   // approach as getMatchBreakdown).
   const rows = (data as unknown as CorrectableMatchRow[] | null) ?? [];
 
-  if (group) {
-    // Both teams of a group match share the group, so the home side's label
-    // identifies the whole fixture.
-    return rows
-      .filter((row) => row.home_team?.group_label === group)
-      .map(toCorrectableMatch);
+  if (round) {
+    // The round filter is fully resolved in SQL — return every match of it.
+    return rows.map(toCorrectableMatch);
   }
 
   // Keep only the matches whose AR-local kickoff day is today — the same day

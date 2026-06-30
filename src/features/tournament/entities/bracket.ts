@@ -69,6 +69,62 @@ const KNOCKOUT_ROUND_ORDER: Round[] = [
   "final",
 ];
 
+/**
+ * Canonical TOP-TO-BOTTOM order of each knockout round, by FIFA match number.
+ *
+ * The bracket TREE — not the calendar — decides a card's vertical position:
+ * round-N match k is fed by round-(N-1) matches at slots 2k and 2k+1, so those
+ * two feeders MUST sit adjacent (and in this order) for the connector lines to
+ * land on the right card. Kickoff order does NOT match the tree (e.g. P73 kicks
+ * off first but sits 3rd in R32), so ordering a round by kickoff drew the wrong
+ * crossings.
+ *
+ * Derived straight from the seed's winner placeholders, walked back from the
+ * final: P101=W97/W98, P102=W99/W100 → QF order 97,98,99,100; each QF names its
+ * two R16 feeders (P97=W89/W90 …) → R16 order; each R16 names its two R32
+ * feeders (P89=W74/W77 …) → R32 order. Final / third-place hold a single match,
+ * so they need no entry (they fall back to kickoff, a no-op for one match).
+ */
+const BRACKET_POSITION: Partial<Record<Round, number[]>> = {
+  r32: [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87],
+  r16: [89, 90, 93, 94, 91, 92, 95, 96],
+  qf: [97, 98, 99, 100],
+  sf: [101, 102],
+};
+
+/**
+ * Extracts the FIFA match number from a knockout externalRef
+ * (`wc2026-ko-89` → 89). Returns null for refs without one (group-fallback
+ * refs like the final's `wc2026-g-x-w101-vs-w102`), which then sort last.
+ */
+function fifaMatchNumber(externalRef: string): number | null {
+  const match = /-ko-(\d+)$/.exec(externalRef);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * Orders a round's matches by their canonical bracket position so the visual
+ * crossings line up with the tournament tree. Matches whose number isn't in the
+ * round's order (or rounds with no canonical order) fall back to kickoff —
+ * a stable no-op for the single-match final / third-place rounds.
+ */
+function orderByBracketPosition(round: Round, matches: Match[]): Match[] {
+  const order = BRACKET_POSITION[round];
+  const positionOf = (m: Match): number => {
+    if (!order) return Number.MAX_SAFE_INTEGER;
+    const num = fifaMatchNumber(m.externalRef);
+    const index = num === null ? -1 : order.indexOf(num);
+    return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+  };
+
+  return [...matches].sort((a, b) => {
+    const pa = positionOf(a);
+    const pb = positionOf(b);
+    if (pa !== pb) return pa - pb;
+    return a.kickoffAt.getTime() - b.kickoffAt.getTime();
+  });
+}
+
 // ---------------------------------------------------------------------------
 // formatPlaceholder
 // ---------------------------------------------------------------------------
@@ -185,29 +241,30 @@ export function deriveBracketWinner(match: Match): BracketWinner {
 // `teams` is accepted to match the design's function signature (mirrors
 // `computeStandings`) but is not needed here — team data is already embedded
 // in each Match's homeTeam/awayTeam fields.
+function toBracketMatch(match: Match): BracketMatch {
+  return {
+    id: match.id,
+    home: resolveSlot(match.homeTeam, match.homePlaceholder),
+    away: resolveSlot(match.awayTeam, match.awayPlaceholder),
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
+    winner: deriveBracketWinner(match),
+    decidedByPenalties: match.penaltyWinnerTeam !== null,
+    kickoffAt: match.kickoffAt.toISOString(),
+    status: match.status,
+  };
+}
+
 export function buildBracket(matches: Match[], _teams: Team[]): BracketRound[] {
-  const byRound = new Map<Round, BracketMatch[]>();
+  const byRound = new Map<Round, Match[]>();
 
   for (const match of matches) {
     if (match.round === "group") continue;
-
-    const bMatch: BracketMatch = {
-      id: match.id,
-      home: resolveSlot(match.homeTeam, match.homePlaceholder),
-      away: resolveSlot(match.awayTeam, match.awayPlaceholder),
-      homeScore: match.homeScore,
-      awayScore: match.awayScore,
-      winner: deriveBracketWinner(match),
-      decidedByPenalties: match.penaltyWinnerTeam !== null,
-      kickoffAt: match.kickoffAt.toISOString(),
-      status: match.status,
-    };
-
     const bucket = byRound.get(match.round);
     if (bucket) {
-      bucket.push(bMatch);
+      bucket.push(match);
     } else {
-      byRound.set(match.round, [bMatch]);
+      byRound.set(match.round, [match]);
     }
   }
 
@@ -215,9 +272,10 @@ export function buildBracket(matches: Match[], _teams: Team[]): BracketRound[] {
     (round) => ({
       round,
       label: KNOCKOUT_ROUND_LABELS[round] ?? round,
-      // ISO 8601 UTC strings sort lexicographically in chronological order.
-      matches: [...(byRound.get(round) ?? [])].sort((a, b) =>
-        a.kickoffAt.localeCompare(b.kickoffAt),
+      // Ordered by the canonical bracket tree (not kickoff) so the connector
+      // lines join each card to its real feeders.
+      matches: orderByBracketPosition(round, byRound.get(round) ?? []).map(
+        toBracketMatch,
       ),
     }),
   );

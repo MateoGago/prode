@@ -16,11 +16,30 @@ import {
   formatPlaceholder,
   groupsForPlaceholder,
 } from "@/features/tournament/entities/bracket";
+import type { Round } from "@/features/fixtures/entities/match";
+
+/**
+ * Knockout-phase filters for the admin panel. The group stage is over, so the
+ * panel filters by elimination round instead — each chip loads ALL matches of
+ * that phase across the tournament (see selectCorrectableMatches `round`).
+ */
+const KNOCKOUT_FILTERS: { round: Round; label: string }[] = [
+  { round: "r32", label: "16avos" },
+  { round: "r16", label: "Octavos" },
+  { round: "qf", label: "Cuartos" },
+  { round: "sf", label: "Semis" },
+  { round: "third_place", label: "3er puesto" },
+  { round: "final", label: "Final" },
+];
+
+const KNOCKOUT_ROUNDS = new Set<Round>(
+  KNOCKOUT_FILTERS.map((filter) => filter.round),
+);
 
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ grupo?: string }>;
+  searchParams: Promise<{ fase?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -33,18 +52,19 @@ export default async function AdminPage({
     .maybeSingle();
   if (profile?.role !== "admin") redirect("/");
 
-  // Validate the group filter against the schema's A–L range (teams.group_label
-  // CHECK) — an out-of-range value just falls back to the "today" view.
-  const { grupo } = await searchParams;
-  const requestedGroup = grupo?.toUpperCase();
-  const activeGroup =
-    requestedGroup && /^[A-L]$/.test(requestedGroup)
-      ? requestedGroup
-      : undefined;
+  // Validate the phase filter against the known knockout rounds — an unknown
+  // value just falls back to the "today" view.
+  const { fase } = await searchParams;
+  const activeRound: Round | undefined = KNOCKOUT_ROUNDS.has(fase as Round)
+    ? (fase as Round)
+    : undefined;
+  const activeLabel = KNOCKOUT_FILTERS.find(
+    (filter) => filter.round === activeRound,
+  )?.label;
 
   // Fetch all data in parallel — independent queries.
   const [matches, knockoutSlots, teamsData] = await Promise.all([
-    selectCorrectableMatches({ group: activeGroup }),
+    selectCorrectableMatches({ round: activeRound }),
     selectKnockoutSlots(),
     supabase
       .from("teams")
@@ -74,16 +94,6 @@ export default async function AdminPage({
     return eligible.map((t) => ({ id: t.id, name: t.name }));
   };
 
-  // Group chips are derived from the data, never hardcoded: only groups that
-  // actually have teams loaded show up.
-  const groups = Array.from(
-    new Set(
-      (teamsData.data ?? [])
-        .map((t) => t.group_label)
-        .filter((g): g is string => g !== null),
-    ),
-  ).sort();
-
   return (
     <section className="grid gap-6">
       <header className="grid gap-1.5">
@@ -94,8 +104,8 @@ export default async function AdminPage({
           Panel de resultados
         </h1>
         <p className="max-w-prose text-sm text-muted-foreground">
-          {activeGroup
-            ? `Grupo ${activeGroup}: todos los partidos de la fase de grupos. `
+          {activeLabel
+            ? `${activeLabel}: todos los partidos de esta instancia. `
             : "Partidos de hoy. "}
           Cargá o corregí el resultado final a mano —al confirmar se recalculan
           los puntos de todas las predicciones de ese partido— sin depender de
@@ -103,21 +113,21 @@ export default async function AdminPage({
         </p>
       </header>
 
-      {/* ── Filtros: Hoy + un chip por grupo ────────────────────────────── */}
+      {/* ── Filtros: Hoy + un chip por instancia eliminatoria ───────────── */}
       <nav
         aria-label="Filtrar partidos"
         className="flex flex-wrap items-center gap-1.5"
       >
-        <Link href="/admin" className={chipClass(!activeGroup)}>
+        <Link href="/admin" className={chipClass(!activeRound)}>
           Hoy
         </Link>
-        {groups.map((group) => (
+        {KNOCKOUT_FILTERS.map((filter) => (
           <Link
-            key={group}
-            href={`/admin?grupo=${group}`}
-            className={chipClass(activeGroup === group)}
+            key={filter.round}
+            href={`/admin?fase=${filter.round}`}
+            className={chipClass(activeRound === filter.round)}
           >
-            Grupo {group}
+            {filter.label}
           </Link>
         ))}
       </nav>
@@ -125,13 +135,13 @@ export default async function AdminPage({
       {matches.length === 0 ? (
         <EmptyState
           title={
-            activeGroup
-              ? `Grupo ${activeGroup} sin partidos.`
+            activeLabel
+              ? `${activeLabel} sin partidos.`
               : "No hay partidos hoy."
           }
           description={
-            activeGroup
-              ? "Todavía no hay partidos cargados para este grupo."
+            activeLabel
+              ? "Todavía no hay partidos con ambos equipos definidos en esta instancia. Asigná los equipos de la llave abajo."
               : "Cuando haya partidos programados para el día de hoy, vas a poder cargar su resultado acá."
           }
         />
